@@ -1,0 +1,9 @@
+tvs-pmp-provision-db.php
+*.swp
+vendor/
+vendor/*
+vendor/*.*
+/vendor/*.*
+/vendor/*
+node_modules/
+composer.lock

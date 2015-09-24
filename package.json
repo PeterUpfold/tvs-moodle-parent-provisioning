@@ -1,0 +1,15 @@
+{
+  "name": "tvs-moodle-parent-provisioning",
+  "version": "1.0.0",
+  "description": "This plugin supports the provisioning of new parent Moodle accounts and provides an interface within the WordPress",
+  "main": "index.js",
+  "dependencies": {
+    "handsontable": "^0.31.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "TestValleySchool",
+  "license": "GPL-2.0"
+}
