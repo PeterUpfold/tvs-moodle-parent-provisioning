@@ -150,11 +150,6 @@ class TVS_PMP_Provisioner {
 		$this->php_path = $php_path;
 
 		// validate PHP path
-		if ( ! preg_match( '^(/[^/ ]*)+/?$', $this->php_path ) ) {
-			$exception_message = sprintf( __( 'Failed to match the PHP path with the validation regular expression. PHP path supplied: %s', 'tvs-moodle-parent-provisioning' ), $this->php_path )l
-			$this->logger->error( $exception_message );
-			throw new \Exception( $exception_message );
-		}
 		if ( ! file_exists( $this->php_path ) ) {
 			$exception_message = sprintf( __( 'The PHP path %s does not exist or could not be accessed.', 'tvs-moodle-parent-provisioning' ), $this->php_path );
 			$this->logger->error( $exception_message );
