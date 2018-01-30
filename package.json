@@ -11,5 +11,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "TestValleySchool",
-  "license": "GPL-2.0"
+  "license": "GPL-2.0",
+  "repository": "https://github.com/TestValleySchool/tvs-moodle-parent-provisioning"
 }

@@ -307,6 +307,7 @@ class TVS_Parent_Moodle_Provisioning {
 					'moodle-dbhost',
 					'moodle-dbprefix',
 					'moodle-sudo-account',
+					'php-path',
 					'moodle-modifier-id',
 					'contexts-to-add-role',
 					'contexts-notes',

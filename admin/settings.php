@@ -95,6 +95,13 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) || !defined( 'T
 	</td>
 </tr>
 <tr>
+	<th scope="row"><?php _e( 'Path to PHP Executable', 'tvs-moodle-parent-provisioning' ); ?></th>
+	<td>
+		<input class="regular-text" name="php-path" id="php-path" type="text" value="<?php echo esc_attr( get_option( 'tvs-moodle-parent-provisioning-php-path' ) ) ; ?>" />
+		<p class="description"><?php _e( 'The full file path to the PHP executable to use to run the Moodle scheduled tasks from the command line.', 'tvs-moodle-parent-provisioning' ); ?></p>
+	</td>
+</tr>
+<tr>
 	<th scope="row"><?php _e( 'Provisioning Log File Path', 'tvs-moodle-parent-provisioning' ); ?></th>
 	<td>
 		<input class="regular-text" name="log-file-path" id="log-file-path" type="text" value="<?php echo esc_attr( get_option( 'tvs-moodle-parent-provisioning-log-file-path' ) ) ; ?>" />

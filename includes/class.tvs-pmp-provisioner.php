@@ -56,6 +56,11 @@ class TVS_PMP_Provisioner {
 	protected $sudo_account = '';
 
 	/**
+	 * The full file path to the PHP executable we shall use for invoking Moodle scheduled tasks via the CLI.
+	 */
+	protected $php_path = '';
+
+	/**
 	 * Monolog Logger instance for reporting information.
 	 */
 	protected $logger = null;
@@ -121,7 +126,7 @@ class TVS_PMP_Provisioner {
 	/**
 	 *
 	 */
-	public function __construct( $dbhost, $dbuser, $dbpass, $db, $dbprefix, $log_file_path, $parent_role_id, $modifier_id, $sudo_account, $moodle_baseurl, $moodle_basepath ) {
+	public function __construct( $dbhost, $dbuser, $dbpass, $db, $dbprefix, $log_file_path, $parent_role_id, $modifier_id, $sudo_account, $php_path, $moodle_baseurl, $moodle_basepath ) {
 		$this->logger = new Logger( 'tvs-pmp-provisioner' );
 
 		$log_level = ( 'info' == get_option( 'tvs-moodle-parent-provisioning-log-level' ) ) ? Logger::INFO : Logger::DEBUG;
@@ -142,6 +147,20 @@ class TVS_PMP_Provisioner {
 		$this->parent_role_id = $parent_role_id;
 		$this->modifier_id = $modifier_id;
 		$this->sudo_account = $sudo_account;
+		$this->php_path = $php_path;
+
+		// validate PHP path
+		if ( ! preg_match( '^(/[^/ ]*)+/?$', $this->php_path ) ) {
+			$exception_message = sprintf( __( 'Failed to match the PHP path with the validation regular expression. PHP path supplied: %s', 'tvs-moodle-parent-provisioning' ), $this->php_path )l
+			$this->logger->error( $exception_message );
+			throw new \Exception( $exception_message );
+		}
+		if ( ! file_exists( $this->php_path ) ) {
+			$exception_message = sprintf( __( 'The PHP path %s does not exist or could not be accessed.', 'tvs-moodle-parent-provisioning' ), $this->php_path );
+			$this->logger->error( $exception_message );
+			throw new \Exception( $exception_message );
+		}
+
 		$this->moodle_baseurl = $moodle_baseurl;
 		$this->moodle_basepath = $moodle_basepath;
 
@@ -549,7 +568,9 @@ class TVS_PMP_Provisioner {
 		
 		$command = 'sudo -u ' .
 			escapeshellarg( $this->sudo_account ) .
-			' /usr/bin/php ' .
+			' ' .
+			escapeshellarg( $this->php_path ) .
+			' ' .
 			escapeshellarg( trailingslashit( $this->moodle_basepath ) . 'admin/tool/task/cli/schedule_task.php' )
 			. ' --execute='.
 			escapeshellarg( $task ) .

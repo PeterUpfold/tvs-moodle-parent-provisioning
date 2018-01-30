@@ -36,6 +36,7 @@ $provisioner = new TVS_PMP_Provisioner(
 	get_option( $set_prefix . 'moodle-parent-role' ),
 	get_option( $set_prefix . 'moodle-modifier-id' ),
 	get_option( $set_prefix . 'moodle-sudo-account' ),
+	get_option( $set_prefix . 'php-path' ),
 	get_option( $set_prefix . 'moodle-url' ),
 	get_option( $set_prefix . 'moodle-path' )
 );
