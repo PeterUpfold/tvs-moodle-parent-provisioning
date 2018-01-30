@@ -311,6 +311,7 @@ class TVS_Parent_Moodle_Provisioning {
 					'moodle-modifier-id',
 					'contexts-to-add-role',
 					'contexts-notes',
+					'match-by-fields',
 					'moodle-parent-role',
 					'smtp-server',
 					'smtp-username',
@@ -607,10 +608,37 @@ class TVS_Parent_Moodle_Provisioning {
 				}
 			}
 
+			if ( 'match-by-fields' == $name && ! $this->validate_match_by_setting( $_POST[ $name ] ) ) {
+				$success = sprintf( __( 'Failed to update setting \'%s\', as \'%s\' is not a valid option.', 'tvs-moodle-parent-provisioning' ), $name, esc_html( $_POST[ $name ] ) );
+				return;
+			}
+
 			update_option( 'tvs-moodle-parent-provisioning-' . $name, stripslashes( $_POST[ $name ] ) );
 			$success = __( 'Settings saved.', 'tvs-moodle-parent-provisioning' );
 		}
 		
+	}
+
+	/**
+	 * Return true if the input string is a valid choice for our 'match-by' setting.
+	 *
+	 * @return bool
+	 */
+	protected function validate_match_by_setting( $option ) {
+		return ( 'firstname-surname-departmentnumber' == $option || 'firstname-surname-only' == $option );
+	}
+
+	/**
+	 * If the specified option matches the value to seek, print the selected="selected" attribute
+	 * to output to pre-select a given drop-down menu item.
+	 *
+	 * @param $option_name string The wp_option we are querying, without prefix.
+	 * @param $value_to_seek string The value which, if set, should cause us to output a selected HTML attribute.
+	 */
+	public static function print_selected_attribute( $option_name, $value_to_seek ) {
+		if ( get_option( 'tvs-moodle-parent-provisioning-' . $option_name ) == $value_to_seek ) {
+			echo ' selected="selected"';
+		}
 	}
 
 	/**

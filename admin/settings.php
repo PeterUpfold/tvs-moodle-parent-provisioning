@@ -160,6 +160,29 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) || !defined( 'T
 
 <tr>
 	<th scope="row" colspan="2">
+		<h3><?php _e( 'User Matching', 'tvs-moodle-parent-provisioning' ); ?></h3>
+		<p class="description"><?php _e( 'These settings determine how to handle the matching of Moodle user accounts when a new parent account is being connected to any associated pupil accounts.', 'tvs-moodle-parent-provisioning' ); ?></p>
+	</th>
+
+<tr>
+
+<tr>
+	<th scope="row"><?php _e( 'Match by Fields', 'tvs-moodle-parent-provisioning' ); ?></th>
+	<td>
+		<select id="match-by-fields" name="match-by-fields">
+			<option value="firstname-surname-departmentnumber"<?php TVS_Parent_Moodle_Provisioning::print_selected_attribute( 'match-by-fields', 'firstname-surname-departmentnumber' ); ?>>
+				<?php _e( 'First Name, Surname &amp; Department Number (Tutor Group)', 'tvs-moodle-parent-provisioning' ); ?>
+			</option> 
+			<option value="firstname-surname-only"<?php TVS_Parent_Moodle_Provisioning::print_selected_attribute( 'match-by-fields', 'firstname-surname-only' ); ?>>
+				<?php _e( 'First Name &amp; Surname only', 'tvs-moodle-parent-provisioning' ); ?>
+			</option> 
+
+		</select>
+		<p class="description"><?php _e( 'Matching on <em>First Name, Surname &amp; Department Number</em> requires that your directory is accurately populated with Tutor Group information. If you choose to match on <em>First Name &amp; Surname only</em>, this is not required, but there is a greater risk of a name collision when trying to provision accounts. In that case, the provisioner will refuse to connect parents to pupils and manual intervention will be required.', 'tvs-moodle-parent-provisioning' ); ?></p>
+	</td>
+</tr>
+<tr>
+	<th scope="row" colspan="2">
 		<h3><?php _e( 'Email Configuration', 'tvs-moodle-parent-provisioning' ); ?></h3>
 	</th>
 </tr>

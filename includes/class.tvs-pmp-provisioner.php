@@ -42,7 +42,7 @@ class TVS_PMP_Provisioner {
 	/**
 	 * A mysqli object we can use to connect to the Moodle database.
 	 */
-	protected $dbc = null;
+	protected $dbc = NULL;
 
 	/**
 	 * The database prefix for the tables in the Moodle database 
@@ -63,7 +63,7 @@ class TVS_PMP_Provisioner {
 	/**
 	 * Monolog Logger instance for reporting information.
 	 */
-	protected $logger = null;
+	protected $logger = NULL;
 
 	/**
 	 * The type of authentication plugin that is used on Moodle. Typically this will be 'db'
@@ -76,7 +76,7 @@ class TVS_PMP_Provisioner {
 	 *
 	 * We use this to ensure that newly created user accounts are considered 'local' by Moodle.
 	 */
-	protected $local_mnethostid = null;
+	protected $local_mnethostid = NULL;
 
 	/**
 	 * A context which is global to the whole Moodle instance.
@@ -121,7 +121,7 @@ class TVS_PMP_Provisioner {
 	/**
 	 * A stream resource we use to buffer the log entries and have the whole log be accessible from this instance.
 	 */
-	protected $local_log_stream = null;
+	protected $local_log_stream = NULL;
 
 	/**
 	 *
@@ -159,7 +159,7 @@ class TVS_PMP_Provisioner {
 		$this->moodle_baseurl = $moodle_baseurl;
 		$this->moodle_basepath = $moodle_basepath;
 
-		if ( $this->dbc->connect_error !== null ) {
+		if ( $this->dbc->connect_error !== NULL ) {
 			$this->logger->error( sprintf ( __( 'Failed to initialise the database object. Connection error %d: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->connect_errno, $this->dbc->connect_error ) );
 			if ( php_sapi_name() != 'cli' ) {
 				echo sprintf ( __( 'Failed to initialise the database object. Connection error %d: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->connect_errno, $this->dbc->connect_error );
@@ -400,23 +400,37 @@ class TVS_PMP_Provisioner {
 	 *
 	 * @param string fname First name
 	 * @param string sname Surname
-	 * @param string dept Department attribute -- typically tutor group
+	 * @param string dept Optional department attribute -- typically tutor group
 	 *
 	 * @return stdClass of user id, auth, firstname, lastname, email department or NULL
 	 */
 
-	public function get_pupil_moodle_user( $fname, $sname, $dept ) {
-		$this->logger->debug( sprintf( __( 'Attempt to match pupil with name %s %s with department %s', 'tvs-moodle-parent-provisioning' ), $fname, $sname, $dept ) );
+	public function get_pupil_moodle_user( $fname, $sname, $dept = NULL ) {
+		if ( $dept ) {
+			$this->logger->debug( sprintf( __( 'Attempt to match pupil with name %s %s with department %s', 'tvs-moodle-parent-provisioning' ), $fname, $sname, $dept ) );
 
-	
-		$stmt = $this->dbc->prepare( "SELECT id, auth, firstname, lastname, email, department FROM {$this->dbprefix}user WHERE firstname = ? AND lastname = ? AND department = ? AND deleted = ?" );
+			$stmt = $this->dbc->prepare( "SELECT id, auth, firstname, lastname, email, department FROM {$this->dbprefix}user WHERE firstname = ? AND lastname = ? AND department = ? AND deleted = ?" );
 
-		if ( ! $stmt ) {
-			throw new Exception( sprintf( __( 'Failed to prepare the database statement to get pupil user data. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+			if ( ! $stmt ) {
+				throw new Exception( sprintf( __( 'Failed to prepare the database statement to get pupil user data. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+			}
+
+			$zero = 0;
+			$stmt->bind_param( 'sssi', $fname, $sname, $dept, $zero );
 		}
+		else {
+			$this->logger->debug( sprintf( __( 'Attempt to match pupil with name %s %s', 'tvs-moodle-parent-provisioning' ), $fname, $sname ) );
+			$stmt = $this->dbc->prepare( "SELECT id, auth, firstname, lastname, email, department FROM {$this->dbprefix}user WHERE firstname = ? AND lastname = ? AND deleted = ?" );
 
-		$zero = 0;
-		$stmt->bind_param( 'sssi', $fname, $sname, $dept, $zero );
+			if ( ! $stmt ) {
+				throw new Exception( sprintf( __( 'Failed to prepare the database statement to get pupil user data. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+			}
+
+			$zero = 0;
+			$stmt->bind_param( 'ssi', $fname, $sname, $zero );
+		}
+	
+
 		$stmt->execute();
 		$stmt->store_result();
 
@@ -607,9 +621,14 @@ class TVS_PMP_Provisioner {
 
 		$this->logger->info( sprintf( __( 'Starting process to connect pupil %s %s (%s) to parent user ID %d', 'tvs-moodle-parent-provisioning' ), $pupil_fname, $pupil_sname, $pupil_dept, $parent_userid ) );
 
-		// first, we match the pupil by name and dept (tutor group)
+		// first, we match the pupil by name and optionally dept (tutor group)
 		try {
-			$pupil = $this->get_pupil_moodle_user( $pupil_fname, $pupil_sname, $pupil_dept );	
+			if ( 'firstname-surname-only' == get_option( 'tvs-moodle-parent-provisioning-match-by-fields' ) ) {
+				$pupil = $this->get_pupil_moodle_user( $pupil_fname, $pupil_sname, NULL );	
+			}
+			else {
+				$pupil = $this->get_pupil_moodle_user( $pupil_fname, $pupil_sname, $pupil_dept );	
+			}
 		}
 		catch (Exception $e) {
 			$this->logger->error( $e->getMessage() );
@@ -724,7 +743,7 @@ class TVS_PMP_Provisioner {
 	public function determine_local_mnethostid() {
 		$this->logger->debug( __( 'Determine local mnethostid', 'tvs-moodle-parent-provisioning' ) );
 
-		if ( $this->local_mnethostid != null ) {
+		if ( $this->local_mnethostid != NULL ) {
 			$this->logger->debug( sprintf( __( 'Returning locally cached mnethostid %d', 'tvs-moodle-parent-provisioning' ),  $this->local_mnethostid ) );
 			return $this->local_mnethostid;
 		}
