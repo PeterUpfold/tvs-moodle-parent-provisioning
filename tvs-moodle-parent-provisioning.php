@@ -8,7 +8,7 @@ Author: Mr P Upfold
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 */
-/* Copyright (C) 2016-2017 Test Valley School.
+/*/* Copyright (C) 2016-2018 Test Valley School.
 
 
     This program is free software; you can redistribute it and/or
