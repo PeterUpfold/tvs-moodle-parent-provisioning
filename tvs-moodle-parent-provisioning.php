@@ -29,8 +29,8 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) ) {
 	die();
 }
 
-define( 'TVS_PMP_DBVERSION', '1.3' );
-define( 'TVS_PMP_REQUIRED_CAPABILITY', 'activate_plugins' );
+define( 'TVS_PMP_DBVERSION', '1.4' );
+define( 'TVS_PMP_REQUIRED_CAPABILITY', 'manage_parent_moodle_account_requests' );
 
 // autoload our vendor classes
 // NOTE: If something is not working here, make sure you run 'composer install' to install the packages. Composer is available at https://getcomposer.org/doc/00-intro.md
@@ -55,7 +55,7 @@ class TVS_Parent_Moodle_Provisioning {
 		
 		require_once( dirname( __FILE__ ) . '/includes/class.tvs-pmp-actions-rest-controller.php' );
 		$rest_controller = new TVS_PMP_Actions_REST_Controller();
-		add_action( 'rest_api_init', array( $rest_controller, 'register_routes' );
+		add_action( 'rest_api_init', array( $rest_controller, 'register_routes' ) );
 	}
 
 	/**
@@ -114,6 +114,9 @@ class TVS_Parent_Moodle_Provisioning {
 
 		dbDelta( $sql );
 
+		// ensure the custom capability is set on the Administrator role
+		$role = get_role( 'administrator' );
+		$role->add_cap( TVS_PMP_REQUIRED_CAPABILITY );
 
 		add_option( 'tvs_parent_moodle_provisioning_dbversion', TVS_PMP_DBVERSION );
 	

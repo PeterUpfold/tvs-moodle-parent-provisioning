@@ -32,12 +32,12 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 		/**
 		 * The version number of the WP-JSON Parent Moodle Provisioning API.
 		 */
-		public const API_VERSION = '1.0';
+		const API_VERSION = '1.0';
 
 		/**
 		 * The namespace of the WP-JSON Parent Moodle Provisioning API.
 		 */
-		public const API_NAMESPACE = 'testvalleyschool/v1';
+		const API_NAMESPACE = 'testvalleyschool/v1';
 
 		/**
 		 * Create a new object of this type.
@@ -53,7 +53,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 		 * @return bool
 		 */
 		protected function string_valid_and_not_empty( $param ) {
-			return (is_string( $param ) && strlen( trim( $param ) ) > 0)
+			return (is_string( $param ) && strlen( trim( $param ) ) > 0);
 		}
 
 		/**
@@ -77,7 +77,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 			);
 
 			foreach( $other_fields as $other_field ) {
-				if ( ! $this->string_valid_and_not_empty( $request->get_param( 'child' . $prefix . '_' . $other_field ) ) {
+				if ( ! $this->string_valid_and_not_empty( $request->get_param( 'child' . $prefix . '_' . $other_field ) ) ) {
 					return false;
 				}
 			}
@@ -96,7 +96,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 					'methods'		=> array( 'POST' ),
 					'callback'		=> array( $this, 'create_item' ),
 					'permission_callback'   => function() {
-									return current_user_can( TVS_PMP_REQUIRED_CAPABILITY )
+									return current_user_can( TVS_PMP_REQUIRED_CAPABILITY );
 								},
 					'args' 			=> array(
 									'parent_title' => array(
@@ -167,6 +167,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 									'status' => array(
 										'validate_callback' => function( $param, $request, $key ) {
 											return in_array( $param, TVS_PMP_Request::$statuses, true );
+										}
 									),
 									'parent_comment' => array(
 										'validate_callback' => function( $param, $request, $key ) {
@@ -225,7 +226,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 			}
 
 			$parent_account_request = new TVS_PMP_Request();
-			$parent_account_request->request_type = __( 'Uploaded in a batch via the REST API', 'tvs-moodle-parent-provisioning' ) );
+			$parent_account_request->request_type = __( 'Uploaded in a batch via the REST API', 'tvs-moodle-parent-provisioning' );
 			$parent_account_request->parent_title = $request->get_param( 'parent_title' );
 			$parent_account_request->parent_fname = $request->get_param( 'parent_fname' );
 			$parent_account_request->parent_sname = $request->get_param( 'parent_sname' );
@@ -253,7 +254,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 			$parent_account_request->save();
 
 			$response_data = array(
-				'id'           => $parent_account_request->id;
+				'id'           => $parent_account_request->id
 			);
 
 			$response = new WP_REST_Response( $response_data );
