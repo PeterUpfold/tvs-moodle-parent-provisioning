@@ -153,6 +153,20 @@ class TVS_PMP_Request {
 	public static $table_name = 'tvs_parent_moodle_provisioning';
 
 	/**
+	 * The valid statuses for a record.
+	 */
+	public static $statuses = array(
+		'pending',
+		'approved',
+		'provisioned',
+		'rejected',
+		'duplicate',
+		'bogus',
+		'unknown'
+	);
+
+
+	/**
  	 * Set up the object.
 	 */
 	public function __construct() {

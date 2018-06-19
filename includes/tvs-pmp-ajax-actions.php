@@ -27,6 +27,189 @@ require_once( dirname( __FILE__ ) . '/class.tvs-pmp-request.php' );
 class TVS_PMP_Ajax_Actions {
 
 	/**
+	 * The version number of the WP-JSON Parent Moodle Provisioning API.
+	 */
+	public const API_VERSION = '1.0';
+
+	/**
+	 * The namespace of the WP-JSON Parent Moodle Provisioning API.
+	 */
+	public const API_NAMESPACE = 'testvalleyschool/v1';
+
+	/**
+	 * Return whether or not the input parameter is a string and has a length
+	 * greater than zero.
+	 *
+	 * @return bool
+	 */
+	public function string_valid_and_not_empty( $param ) {
+		return (is_string( $param ) && strlen( trim( $param ) ) > 0)
+	}
+
+	/**
+	 * Register our Ajax actions which use the WP-JSON API for external access by the
+	 * PowerShell script.
+	 */
+	public function register_routes() {
+		
+		register_rest_route( $namespace, '/parent-account-request', array(
+			array(
+				'methods'		=> array( 'POST' ),
+				'callback'		=> array( $this, 'create_account_request' ),
+				'args' 			=> array(
+								'parent_title' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									}
+								),
+								'parent_fname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									}
+								),
+								'parent_sname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									}
+								),
+								'child_fname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									}
+								),
+								'child_sname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									}
+								),
+								'child_tg' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									}
+								),
+								'parent_email' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return filter_var( $param, FILTER_VALIDATE_EMAIL );
+									}
+								),
+								'child2_fname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'child2_sname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'child2_tg' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'child3_fname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'child3_sname' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'child3_tg' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'status' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return in_array( $param, TVS_PMP_Request::$statuses, true );
+								),
+								'parent_comment' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'staff_comment' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return is_string( $param );
+									}
+								),
+								'system_comment' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									}
+								),
+								'date_created' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return ( strtotime( $param ) !== false );
+									},
+								),
+								'date_updated' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return ( strtotime( $param ) !== false );
+									},
+								),
+								'date_approved' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return ( strtotime( $param ) !== false );
+									},
+								),
+								'remote_ip_addr' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									},
+								),
+								'request_type' => array(
+									'validate_callback' => function( $param, $request, $key ) {
+										return $this->string_valid_and_not_empty( $param );
+									},
+								)
+				)
+			)
+		) );
+	}
+
+
+	/**
+	 * Handle a WP-JSON REST API request to create ('POST') a 
+	 * parent account request.
+	 */
+	public function create_account_request( WP_REST_Request $request ) {
+		// create a new request based on the passed parameters, pre-validated by the callbacks
+		if ( ! current_user_can( TVS_PMP_REQUIRED_CAPABILITY ) ) {
+			return new WP_Error( 403, __( 'You do not have permission to perform this action.', 'tvs-moodle-parent-provisioning' ) ); 
+		}
+
+		$parent_account_request = new TVS_PMP_Request();
+		$parent_account_request->request_type = __( 'Uploaded in a batch via the REST API', 'tvs-moodle-parent-provisioning' ) );
+		$parent_account_request->parent_title = $request->get_param( 'parent_title' );
+		$parent_account_request->parent_fname = $request->get_param( 'parent_fname' );
+		$parent_account_request->parent_sname = $request->get_param( 'parent_sname' );
+		$parent_account_request->child_fname = $request->get_param( 'child_fname' );
+		$parent_account_request->child_sname = $request->get_param( 'child_sname' );
+		$parent_account_request->child_tg = $request->get_param( 'child_tg' );
+		$parent_account_request->parent_email = $request->get_param( 'parent_email' );
+		$parent_account_request->child2_fname = $request->get_param( 'child2_fname' );
+		$parent_account_request->child2_sname = $request->get_param( 'child2_sname' );
+		$parent_account_request->child2_tg = $request->get_param( 'child2_tg' );
+		$parent_account_request->child3_fname = $request->get_param( 'child3_fname' );
+		$parent_account_request->child3_sname = $request->get_param( 'child3_sname' );
+		$parent_account_request->child3_tg = $request->get_param( 'child3_tg' );
+		$parent_account_request->status = $request->get_param( 'status' );
+		$parent_account_request->parent_comment = $request->get_param( 'parent_comment' );
+		$parent_account_request->staff_comment = $request->get_param( 'staff_comment' );
+		$parent_account_request->system_comment = $request->get_param( 'system_comment' );
+		$parent_account_request->date_created = strtotime( $request->get_param( 'date_created' ) );
+		$parent_account_request->date_updated = strtotime( $request->get_param( 'date_updated' ) );
+		$parent_account_request->date_approved = strtotime( $request->get_param( 'date_approved' ) );
+		$parent_account_request->remote_ip_addr = $request->get_param( 'remote_ip_addr' );
+		$parent_account_request->provisioned_username = $request->get_param( 'provisioned_username' );
+		$parent_account_request->provisioned_initialpass = $request->get_param( 'provisioned_initialpass' );
+	}
+
+	/**
 	 * Handle the Ajax event to provision a parent
 	 */
 	public function provision() {
