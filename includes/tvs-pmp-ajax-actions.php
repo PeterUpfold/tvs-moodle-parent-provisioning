@@ -42,8 +42,37 @@ class TVS_PMP_Ajax_Actions {
 	 *
 	 * @return bool
 	 */
-	public function string_valid_and_not_empty( $param ) {
+	protected function string_valid_and_not_empty( $param ) {
 		return (is_string( $param ) && strlen( trim( $param ) ) > 0)
+	}
+
+	/**
+	 * Based on which parameter $key this has (child_, child2_, child3_), check
+	 * that the $request object also contains valid data for the other fields relating
+	 * to that child number. i.e. if you supply a child2_fname, you must also supply
+	 * a child2_sname and child2_tg.
+	 *
+	 * @return bool
+	 */
+	protected function check_other_child_fields( $param, $request, $key ) {
+		if ( preg_match( '/child([2-3])_/', $key, $matches ) !== 1 ) {
+			return false;
+		}
+		$prefix = $matches[1];
+
+		$other_fields = array(
+			'fname',
+			'sname',
+			'tg'
+		);
+
+		foreach( $other_fields as $other_field ) {
+			if ( ! $this->string_valid_and_not_empty( $request->get_param( 'child' . $prefix . '_' . $other_field ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -56,6 +85,9 @@ class TVS_PMP_Ajax_Actions {
 			array(
 				'methods'		=> array( 'POST' ),
 				'callback'		=> array( $this, 'create_account_request' ),
+				'permission_callback'   => function() {
+								return current_user_can( TVS_PMP_REQUIRED_CAPABILITY )
+							},
 				'args' 			=> array(
 								'parent_title' => array(
 									'validate_callback' => function( $param, $request, $key ) {
@@ -94,32 +126,32 @@ class TVS_PMP_Ajax_Actions {
 								),
 								'child2_fname' => array(
 									'validate_callback' => function( $param, $request, $key ) {
-										return is_string( $param );
+										return $this->check_other_child_fields( $param, $request, $key );
 									}
 								),
 								'child2_sname' => array(
 									'validate_callback' => function( $param, $request, $key ) {
-										return is_string( $param );
+										return $this->check_other_child_fields( $param, $request, $key );
 									}
 								),
 								'child2_tg' => array(
 									'validate_callback' => function( $param, $request, $key ) {
-										return is_string( $param );
+										return $this->check_other_child_fields( $param, $request, $key );
 									}
 								),
 								'child3_fname' => array(
 									'validate_callback' => function( $param, $request, $key ) {
-										return is_string( $param );
+										return $this->check_other_child_fields( $param, $request, $key );
 									}
 								),
 								'child3_sname' => array(
 									'validate_callback' => function( $param, $request, $key ) {
-										return is_string( $param );
+										return $this->check_other_child_fields( $param, $request, $key );
 									}
 								),
 								'child3_tg' => array(
 									'validate_callback' => function( $param, $request, $key ) {
-										return is_string( $param );
+										return $this->check_other_child_fields( $param, $request, $key );
 									}
 								),
 								'status' => array(
@@ -207,6 +239,16 @@ class TVS_PMP_Ajax_Actions {
 		$parent_account_request->remote_ip_addr = $request->get_param( 'remote_ip_addr' );
 		$parent_account_request->provisioned_username = $request->get_param( 'provisioned_username' );
 		$parent_account_request->provisioned_initialpass = $request->get_param( 'provisioned_initialpass' );
+
+		$parent_account_request->save();
+
+		$response_data = array(
+			'id'           => $parent_account_request->id;
+		);
+
+		$response = new WP_REST_Response( $response_data );
+
+		return $response;
 	}
 
 	/**
