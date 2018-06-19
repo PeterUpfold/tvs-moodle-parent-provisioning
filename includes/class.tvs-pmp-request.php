@@ -175,6 +175,8 @@ class TVS_PMP_Request {
 
 	/**
 	 * Given a record with the id in $this->id, load it from the database
+	 *
+	 * @return bool Whether or not the data was loaded.
 	 */
 	public function load() {
 
@@ -190,7 +192,36 @@ class TVS_PMP_Request {
 			)
 		);
 
-		
+		if ( $row ) {
+			$this->id = (int) $row->id;
+			$this->parent_title = $row->parent_title;
+			$this->parent_fname = $row->parent_fname;
+			$this->parent_sname = $row->parent_sname;
+			$this->child_fname = $row->child_fname;
+			$this->child_sname = $row->child_sname;
+			$this->child_tg = $row->child_tg;
+			$this->parent_email = $row->parent_email;
+			$this->child2_fname = $row->child2_fname;
+			$this->child2_sname = $row->child2_sname;
+			$this->child2_tg = $row->child2_tg;
+			$this->child3_fname = $row->child3_fname;
+			$this->child3_sname = $row->child3_sname;
+			$this->child3_tg = $row->child3_tg;
+			$this->status = $row->status;
+			$this->parent_comment = $row->parent_comment;
+			$this->staff_comment = $row->staff_comment;
+			$this->system_comment = $row->system_comment;
+			$this->date_created = $row->date_created;
+			$this->date_updated = $row->date_updated;
+			$this->date_approved = $row->date_approved;
+			$this->remote_ip_addr = $row->remote_ip_addr;
+			$this->provisioned_username = $row->provisioned_username;
+			$this->provisioned_initialpass = $row->provisioned_initialpass;
+			$this->request_type = $row->request_type;
+			return true;
+		}
+
+		return false;
 
 	}
 
@@ -382,7 +413,7 @@ class TVS_PMP_Request {
 		}
 
 		$new_status = 'approved';
-		$new_sys_comment = $this->system_comment . PHP_EOL . __( 'Approved for provisioning at ' . date('j F Y H:i:s T') . ' -- awaiting next provision cycle', 'tvs-moodle-parent-provisioning' );
+		$new_sys_comment = $this->system_comment . PHP_EOL . sprintf( __( 'Approved for provisioning at %s -- awaiting next provision cycle', 'tvs-moodle-parent-provisioning' ), date('j F Y H:i:s T'));
 
 		$wpdb->update( 	$wpdb->prefix .'tvs_parent_moodle_provisioning',
 			array(
