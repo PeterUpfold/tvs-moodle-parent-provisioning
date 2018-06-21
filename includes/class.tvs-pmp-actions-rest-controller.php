@@ -25,7 +25,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 
 	/**
 	 * A custom WP_REST_Controller class that supports our REST methods for  
-	 * and dumps them in our custom table.
+	 * managing Parent Account requests.
 	 */
 	class TVS_PMP_Actions_REST_Controller extends WP_REST_Controller {
 
@@ -93,127 +93,165 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 			
 			register_rest_route( $this->namespace, '/parent-account-request', array(
 				array(
-					'methods'		=> array( 'POST' ),
+					'methods'		=> WP_REST_Server::CREATABLE,
 					'callback'		=> array( $this, 'create_item' ),
 					'permission_callback'   => function() {
 									return current_user_can( TVS_PMP_REQUIRED_CAPABILITY );
 								},
-					'args' 			=> array(
-									'parent_title' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										}
-									),
-									'parent_fname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										}
-									),
-									'parent_sname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										}
-									),
-									'child_fname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										}
-									),
-									'child_sname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										}
-									),
-									'child_tg' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										}
-									),
-									'parent_email' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return filter_var( $param, FILTER_VALIDATE_EMAIL );
-										}
-									),
-									'child2_fname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->check_other_child_fields( $param, $request, $key );
-										}
-									),
-									'child2_sname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->check_other_child_fields( $param, $request, $key );
-										}
-									),
-									'child2_tg' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->check_other_child_fields( $param, $request, $key );
-										}
-									),
-									'child3_fname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->check_other_child_fields( $param, $request, $key );
-										}
-									),
-									'child3_sname' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->check_other_child_fields( $param, $request, $key );
-										}
-									),
-									'child3_tg' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->check_other_child_fields( $param, $request, $key );
-										}
-									),
-									'status' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return in_array( $param, TVS_PMP_Request::$statuses, true );
-										}
-									),
-									'parent_comment' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return is_string( $param );
-										}
-									),
-									'staff_comment' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return is_string( $param );
-										}
-									),
-									'system_comment' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										}
-									),
-									'date_created' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return ( strtotime( $param ) !== false );
-										},
-									),
-									'date_updated' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return ( strtotime( $param ) !== false );
-										},
-									),
-									'date_approved' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return ( strtotime( $param ) !== false );
-										},
-									),
-									'remote_ip_addr' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										},
-									),
-									'request_type' => array(
-										'validate_callback' => function( $param, $request, $key ) {
-											return $this->string_valid_and_not_empty( $param );
-										},
-									)
-					)
+					'args' 			=> $this->get_endpoint_args()	
 				)
 			) );
+
+			register_rest_route( $this->namespace, '/parent-account-request/(?P<id>[\d]+)', array(
+				'args' => array(
+					'id' => array(
+						'description' => __( 'Unique identifier for the object.' ),
+						'type'        => 'integer',
+					),
+				),
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_item' ),
+					'permission_callback' => array( $this, 'get_item_permissions_check' ),
+				)
+			) );
+
 		}
 
+		/**
+		 * Return the list of arguments that the REST API methods expect.
+		 *
+		 * @return array
+		 */
+		protected function get_endpoint_args() {
+			return array(
+				'parent_title' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'parent_fname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'parent_sname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'child_fname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'child_sname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'child_tg' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'parent_email' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return filter_var( $param, FILTER_VALIDATE_EMAIL );
+					},
+					'required' => true
+				),
+				'child2_fname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->check_other_child_fields( $param, $request, $key );
+					},
+				),
+				'child2_sname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->check_other_child_fields( $param, $request, $key );
+					},
+				),
+				'child2_tg' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->check_other_child_fields( $param, $request, $key );
+					},
+				),
+				'child3_fname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->check_other_child_fields( $param, $request, $key );
+					},
+				),
+				'child3_sname' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->check_other_child_fields( $param, $request, $key );
+					},
+				),
+				'child3_tg' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->check_other_child_fields( $param, $request, $key );
+					},
+				),
+				'status' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return in_array( $param, TVS_PMP_Request::$statuses, true );
+					},
+					'required' => true
+				),
+				'parent_comment' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return is_string( $param );
+					},
+				),
+				'staff_comment' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return is_string( $param );
+					},
+				),
+				'system_comment' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'date_created' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return ( strtotime( $param ) !== false );
+					},
+					'required' => true
+				),
+				'date_updated' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return ( strtotime( $param ) !== false );
+					},
+					'required' => true
+				),
+				'date_approved' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return ( strtotime( $param ) !== false );
+					},
+					'required' => true
+				),
+				'remote_ip_addr' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				),
+				'request_type' => array(
+					'validate_callback' => function( $param, $request, $key ) {
+						return $this->string_valid_and_not_empty( $param );
+					},
+					'required' => true
+				)
+			);
+
+		}
 
 		/**
 		 * Handle a WP-JSON REST API request to create ('POST') a 
@@ -331,9 +369,24 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 		 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
 		 */
 		public function get_item( $request ) {
-			//TODO stub
+			
+			$id = $request->get_param( 'id' );
 
-			return new WP_REST_Response( array() );
+			if ( $id === null ) {
+				return new WP_Error( 'tvs_pmp_no_item_id',
+					__( 'An \'id\' parameter was not supplied or was not valid.', 'tvs-moodle-parent-provisioning' )
+				);
+			}
+
+			$parent_account_request = new TVS_PMP_Request();
+			$parent_account_request->id = $id;
+
+			if ($parent_account_request->load()) {
+				return new WP_REST_Response( $parent_account_request );
+			}
+			
+			return new WP_Error();
+			//TODO verify that this works when JSON is received
 		}
 
 

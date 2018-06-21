@@ -186,8 +186,10 @@ class TVS_PMP_Request {
 			throw new InvalidArgumentException( 'The $id variable must be set to a non-zero integer.' );
 		}
 
+		$table_name = TVS_PMP_Request::$table_name;
+
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{TVS_PMP_Request::$table_name} WHERE id = %d",
+			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE id = %d",
 					$this->id
 			)
 		);
@@ -231,11 +233,21 @@ class TVS_PMP_Request {
 	 * @return array of TVS_PMP_Request
 	 */
 	public static function load_all_approved() {
+		return TVS_PMP_Request::load_all( 'approved' );
+	}
+
+	/**
+	 * Load all requests currently in the specified state and return an array of objects of this type.
+	 * @param $state The status of the requests
+	 *
+	 * @return array of TVS_PMP_Request
+	 */
+	public static function load_all( $state ) {
 		global $wpdb;
 
 		$requests_raw = $wpdb->get_results( $wpdb->prepare(
 			'SELECT id, parent_title, parent_fname, parent_sname, child_fname, child_sname, child_tg, parent_email, child2_fname, child2_sname, child2_tg, child3_fname, child3_sname, child3_tg, status, parent_comment, staff_comment, system_comment, date_created, date_updated, date_approved, remote_ip_addr, provisioned_username, provisioned_initialpass, request_type FROM ' . $wpdb->prefix .'tvs_parent_moodle_provisioning WHERE status = %s',
-			'approved'
+			$state
 		) );
 
 		if ( count( $requests_raw ) < 1 ) {
