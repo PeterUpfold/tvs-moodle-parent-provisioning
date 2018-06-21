@@ -3,7 +3,7 @@
 Plugin Name: Test Valley School Parent Moodle Provisioning
 Plugin URI: https://www.testvalley.hants.sch.uk/
 Description: This plugin allows captured form submissions for Moodle Parent Accounts to be stored, validated by a staff member and provisioned within Moodle.
-Version: 1.0
+Version: 2.0
 Author: Mr P Upfold
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -66,39 +66,50 @@ class TVS_Parent_Moodle_Provisioning {
 		global $wpdb;
 
 		$charset_collate = $wpdb->get_charset_collate();
-		$table_name = $wpdb->prefix . 'tvs_parent_moodle_provisioning';
+
+		// contact
+		$table_name = $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact';
 
 		$sql = "CREATE TABLE $table_name (
 			id bigint(20) NOT NULL AUTO_INCREMENT  PRIMARY KEY,
-			parent_title varchar(12) NOT NULL,
-			parent_fname varchar(255) NOT NULL,
-			parent_sname varchar(255) NOT NULL,
-			child_fname varchar(255) NOT NULL,
-			child_sname varchar(255) NOT NULL,
-			child_tg varchar(16) NOT NULL,
-			parent_email varchar(255) NOT NULL,
-			child2_fname varchar(255),
-			child2_sname varchar(255) NOT NULL,
-			child2_tg varchar(16) NOT NULL,
-			child3_fname varchar(255),
-			child3_sname varchar(255) NOT NULL,
-			child3_tg varchar(16) NOT NULL,
+			mis_id bigint(20) NOT NULL,
+			external_mis_id varchar(128),
+			title varchar(12) NOT NULL,
+			forename varchar(255) NOT NULL,
+			surname varchar(255) NOT NULL,
+			email varchar(255) NOT NULL,
 			status varchar(16) NOT NULL,
-			parent_comment mediumtext,
 			staff_comment mediumtext,
 			system_comment mediumtext,
 			date_created datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
 			date_updated datetime,
 			date_approved datetime,
-			remote_ip_addr varchar(255) NOT NULL,
-			provisioned_username varchar(255),
-			provisioned_initialpass varchar(255),
-			request_type varchar(255)
+			date_synced datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+			KEY mis_id (mis_id),
+			KEY external_mis_id (external_mis_id)
 		) $charset_collate;";
 
 		require_once ( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		dbDelta( $sql );
 
+		// contact_mapping
+		$table_name = $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact_mapping';
+		
+		$sql = "CREATE TABLE $table_name (
+			id bigint(20) NOT NULL AUTO_INCREMENT  PRIMARY KEY,
+			contact_id bigint(20) NOT NULL,
+			mis_id bigint(20) NOT NULL,
+			external_mis_id varchar(128),
+			adno varchar(32) NOT NULL,
+			username varchar(255) NOT NULL,
+			date_synced datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+			KEY mis_id (mis_id),
+			KEY external_mis_id (external_mis_id),
+			KEY adno (adno)
+		) $charset_collate;";
+		dbDelta( $sql );
+
+		// auth
 		$table_name = $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth';
 
 		$sql = "CREATE TABLE $table_name (

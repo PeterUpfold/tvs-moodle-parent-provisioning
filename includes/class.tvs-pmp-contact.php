@@ -16,90 +16,61 @@
 */
 
 /**
- * Class: represents a single TVS Parent Moodle Account request
+ * Class: represents a single TVS Parent Moodle Account Contact (i.e. a parent within the MIS
+ * who should have an account.
+ *
  */
 
-class TVS_PMP_Request {
+require_once( dirname( __FILE__ ) . '/../vendor/autoload.php' );
+
+use Monolog\Logger;
+use Monolog\ErrorHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\BrowserConsoleHandler;
+
+class TVS_PMP_Contact {
 
 	/**
-	 * The unique ID for this request.
+	 * The unique internal ID for this Contact record.
 	 */
 	public $id;
 
 	/**
+	 * The MIS ID of the Person which is this Contact. This ID is considered
+	 * internal to the MIS (primary key).
+	 */
+	public $mis_id;
+
+	/*
+	 * An "external ID", usually a GUID, which can be used to match this
+	 * Contact within the MIS.
+	 */
+	public $external_mis_id;
+
+	/**
 	 * The parent's title.
 	 */
-	public $parent_title;
+	public $title;
 
 	/**
 	 * The parent's first name.
 	 */
-	public $parent_fname;
+	public $forename;
 
 	/**
 	 * The parent's surname.
 	 */
-	public $parent_sname;
-
-	/**
-	 * The child's first name.
-	 */
-	public $child_fname;
-
-	/**
-	 * The child's surname.
-	 */
-	public $child_sname;
-
-	/**
-	 * The child's tutor group.
-	 */
-	public $child_tg;
+	public $surname;
 
 	/**
 	 * The parent's email address.
 	 */
-	public $parent_email;
-
-	/**
-	 * The second child's first name.
-	 */
-	public $child2_fname;
-
-	/**
-	 * The second child's surname.
-	 */
-	public $child2_sname;
-
-	/**
-	 * The second child's tutor group.
-	 */
-	public $child2_tg;
-
-	/**
-	 * The third child's first name.
-	 */
-	public $child3_fname;
-
-	/**
-	 * The third child's surname.
-	 */
-	public $child3_sname;
-
-	/**
-	 * The third child's tutor group.
-	 */
-	public $child3_tg;
+	public $email;
 
 	/**
 	 * The status of the request -- pending, approved, provisioned, rejected, duplicate, unknown, bogus
 	 */
 	public $status;
-
-	/**
-	 * The parent comment, as provided on the form.
-	 */
-	public $parent_comment;
 
 	/**
 	 * The staff comment, as provided through the backend interface.
@@ -127,25 +98,9 @@ class TVS_PMP_Request {
 	public $date_approved;
 
 	/**
-	 * The IP address from where the request originated.
+	 * The date this object was last evaluated during a Step 2 sync.
 	 */
-	public $remote_ip_addr;
-
-	/**
-	 * The Moodle username that has been provisioned.
-	 */
-	public $provisioned_username;
-
-	/**
-	 * The initial generated password that was provisioned.
-	 */
-	public $provisioned_initialpass;
-
-	/** 
-	 * The nature of the request from the form.
-	 */
-	public $request_type;
-
+	public $date_synced;
 
 	/**
 	 * The name of the database table containing records.
@@ -180,13 +135,19 @@ class TVS_PMP_Request {
 		'deleting' /* temporary status for deprovisioning when a row is being permanently deleted */
 	);
 
-	//TODO managing of pupil connections via this class and the API
+	/**
+	 * Monolog Logger instance for reporting information.
+	 */
+	protected $logger = NULL;
+
 
 	/**
- 	 * Set up the object.
+	 * Set up the object.
+	 *
+	 * @param \Monolog\Logger\Logger $logger An object used to log information 
 	 */
-	public function __construct() {
-		
+	public function __construct( $logger ) {
+		$this->logger = $logger;
 	}
 
 	/**
@@ -199,10 +160,15 @@ class TVS_PMP_Request {
 		global $wpdb;
 
 		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
-			throw new InvalidArgumentException( 'The $id variable must be set to a non-zero integer.' );
+			$error = __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
+			$this->logger->error( $error );
+			throw new InvalidArgumentException( $error );
 		}
-
+		
 		$table_name = TVS_PMP_Request::$table_name;
+
+		$this->logger->debug( sprintf( __( 'Load Contact with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->id, $table_name ) );
+
 
 		$row = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE id = %d",
@@ -212,33 +178,26 @@ class TVS_PMP_Request {
 
 		if ( $row ) {
 			$this->id = (int) $row->id;
-			$this->parent_title = $row->parent_title;
-			$this->parent_fname = $row->parent_fname;
-			$this->parent_sname = $row->parent_sname;
-			$this->child_fname = $row->child_fname;
-			$this->child_sname = $row->child_sname;
-			$this->child_tg = $row->child_tg;
-			$this->parent_email = $row->parent_email;
-			$this->child2_fname = $row->child2_fname;
-			$this->child2_sname = $row->child2_sname;
-			$this->child2_tg = $row->child2_tg;
-			$this->child3_fname = $row->child3_fname;
-			$this->child3_sname = $row->child3_sname;
-			$this->child3_tg = $row->child3_tg;
+			$this->mis_id = $row->mis_id;
+			$this->external_mis_id = $row->external_mis_id;
+			$this->title = $row->title;
+			$this->forename = $row->forename;
+			$this->surname = $row->surname;
+			$this->email = $row->email;
 			$this->status = $row->status;
-			$this->parent_comment = $row->parent_comment;
 			$this->staff_comment = $row->staff_comment;
 			$this->system_comment = $row->system_comment;
 			$this->date_created = $row->date_created;
 			$this->date_updated = $row->date_updated;
 			$this->date_approved = $row->date_approved;
-			$this->remote_ip_addr = $row->remote_ip_addr;
-			$this->provisioned_username = $row->provisioned_username;
-			$this->provisioned_initialpass = $row->provisioned_initialpass;
-			$this->request_type = $row->request_type;
+			$this->date_synced = $row->date_synced;
+
+			$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+
 			return true;
 		}
 
+		$this->logger->warning( sprintf( __( 'Did not succeed at fetching a database row for Contact %d. (This is our ID, not the MIS ID).', 'tvs-moodle-parent-provisioning' ), $this->id ) );
 		return false;
 
 	}
@@ -262,46 +221,38 @@ class TVS_PMP_Request {
 		global $wpdb;
 
 		$requests_raw = $wpdb->get_results( $wpdb->prepare(
-			'SELECT id, parent_title, parent_fname, parent_sname, child_fname, child_sname, child_tg, parent_email, child2_fname, child2_sname, child2_tg, child3_fname, child3_sname, child3_tg, status, parent_comment, staff_comment, system_comment, date_created, date_updated, date_approved, remote_ip_addr, provisioned_username, provisioned_initialpass, request_type FROM ' . $wpdb->prefix .'tvs_parent_moodle_provisioning WHERE status = %s',
+			'SELECT id, mis_id, external_mis_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix .'tvs_parent_moodle_provisioning WHERE status = %s',
 			$state
 		) );
 
 		if ( count( $requests_raw ) < 1 ) {
+			$this->logger->info( __( 'No Contacts were fetched with the status %s', 'tvs-moodle-parent-provisioning' ), $state );
 			return array();
 		}
 
 		$request_objs = array();
 
-		foreach( $requests_raw as $request_raw ) {
+		foreach( $requests_raw as $row ) {
 			$request = new TVS_PMP_Request();
-			$request->id = (int) $request_raw->id;
-			$request->parent_title = $request_raw->parent_title;
-			$request->parent_fname = $request_raw->parent_fname;
-			$request->parent_sname = $request_raw->parent_sname;
-			$request->child_fname = $request_raw->child_fname;
-			$request->child_sname = $request_raw->child_sname;
-			$request->child_tg = $request_raw->child_tg;
-			$request->parent_email = $request_raw->parent_email;
-			$request->child2_fname = $request_raw->child2_fname;
-			$request->child2_sname = $request_raw->child2_sname;
-			$request->child2_tg = $request_raw->child2_tg;
-			$request->child3_fname = $request_raw->child3_fname;
-			$request->child3_sname = $request_raw->child3_sname;
-			$request->child3_tg = $request_raw->child3_tg;
-			$request->status = $request_raw->status;
-			$request->parent_comment = $request_raw->parent_comment;
-			$request->staff_comment = $request_raw->staff_comment;
-			$request->system_comment = $request_raw->system_comment;
-			$request->date_created = $request_raw->date_created;
-			$request->date_updated = $request_raw->date_updated;
-			$request->date_approved = $request_raw->date_approved;
-			$request->remote_ip_addr = $request_raw->remote_ip_addr;
-			$request->provisioned_username = $request_raw->provisioned_username;
-			$request->provisioned_initialpass = $request_raw->provisioned_initialpass;
-			$request->request_type = $request_raw->request_type;
+			$request->id = (int) $row->id;
+			$request->mis_id = $row->mis_id;
+			$request->external_mis_id = $row->external_mis_id;
+			$request->title = $row->title;
+			$request->forename = $row->forename;
+			$request->surname = $row->surname;
+			$request->email = $row->email;
+			$request->status = $row->status;
+			$request->staff_comment = $row->staff_comment;
+			$request->system_comment = $row->system_comment;
+			$request->date_created = $row->date_created;
+			$request->date_updated = $row->date_updated;
+			$request->date_approved = $row->date_approved;
+			$request->date_synced = $row->date_synced;
 			$request_objs[] = $request;
+			$this->logger->debug( __( 'Fetched %s', 'tvs-moodle-parent-provisioning' ), $state );
 		}
 
+		$this->logger->debug( sprintf( __( 'Fetched %d Contacts', 'tvs-moodle-parent-provisioning' ), count( $request_objs ) ) );
 		return $request_objs;
 
 	}
@@ -315,110 +266,80 @@ class TVS_PMP_Request {
 		global $wpdb;
 
 		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
+
+			$this->logger->debug( __( 'ID was not set, so creating a new Contact.', 'tvs-moodle-parent-provisioning' ) );
+
 			$affected_rows = $wpdb->insert(
 				( $wpdb->prefix . TVS_PMP_Request::$table_name ),
 				array(
-					'parent_title'    => stripslashes( $this->parent_title ),
-					'parent_fname'    => stripslashes( $this->parent_fname ),
-					'parent_sname'    => stripslashes( $this->parent_sname ),
-					'child_fname'     => stripslashes( $this->child_fname ),
-					'child_sname'     => stripslashes( $this->child_sname ),
-					'child_tg'        => stripslashes( substr( $this->child_tg, 0, 15 ) ),
-					'parent_email'    => stripslashes( strtolower( $this->parent_email ) ),
-					'child2_fname'    => stripslashes( $this->child2_fname ),
-					'child2_sname'    => stripslashes( $this->child2_sname ),
-					'child2_tg'       => stripslashes( substr( $this->child2_tg, 0, 15 ) ),
-					'child3_fname'    => stripslashes( $this->child3_fname ),
-					'child3_sname'    => stripslashes( $this->child3_sname ),
-					'child3_tg'       => stripslashes( substr( $this->child3_tg, 0, 15 ) ),
-					'parent_comment'  => stripslashes( $this->parent_comment ),
+					'mis_id'          => intval( $this->mis_id ),
+					'external_mis_id' => stripslashes( $this->external_mis_id ),
+					'title'           => stripslashes( $this->title ),
+					'forename'        => stripslashes( $this->forename ),
+					'surname'         => stripslashes( $this->surname ),
+					'email'           => stripslashes( strtolower( $this->email ) ),
 					'date_created'    => date( 'Y-m-d H:i:s' ),
 					'status'          => 'pending',
-					'remote_ip_addr'  => stripslashes( $_SERVER['REMOTE_ADDR'] ), //TODO this is internal -- do we want this??
-					'request_type'    => stripslashes( $this->request_type ),
 				),
 				array(
-					'%s',               // parent_title
-					'%s',               // parent_fname
-					'%s',               // parent_sname
-					'%s',               // child_fname
-					'%s',               // child_sname
-					'%s',               // child_tg
-					'%s',               // parent_email
-					'%s',               // child2_fname
-					'%s',               // child2_sname
-					'%s',               // child2_tg
-					'%s',               // child3_fname
-					'%s',               // child3_sname
-					'%s',               // child3_tg
-					'%s',               // parent_comment
+					'%d',               // mis_id
+					'%s',               // external_mis_id
+					'%s',               // title
+					'%s',               // fname
+					'%s',               // sname
+					'%s',               // email
 					'%s',               // date_created
-					'%s',               // status
-					'%s',               // remote_ip_addr
-					'%s'		    // request_type	
+					'%s'                // status
 				)
 			);
 
 			if ( $affected_rows !== false ) {
 				$this->id = $wpdb->insert_id;
+				$this->logger->info( sprintf( __( 'Created a new Contact %s.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 			}
 
 			$this->status = 'pending';
 
 		}
 		else {
+			$this->logger->debug( sprintf( __( 'ID was set, so updating %s.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 			$affected_rows = $wpdb->update(
 				( $wpdb->prefix . TVS_PMP_Request::$table_name ),
 				array(
-					'parent_title'    => stripslashes( $this->parent_title ),
-					'parent_fname'    => stripslashes( $this->parent_fname ),
-					'parent_sname'    => stripslashes( $this->parent_sname ),
-					'child_fname'     => stripslashes( $this->child_fname ),
-					'child_sname'     => stripslashes( $this->child_sname ),
-					'child_tg'        => stripslashes( substr( $this->child_tg, 0, 15 ) ),
-					'parent_email'    => stripslashes( strtolower( $this->parent_email ) ),
-					'child2_fname'    => stripslashes( $this->child2_fname ),
-					'child2_sname'    => stripslashes( $this->child2_sname ),
-					'child2_tg'       => stripslashes( substr( $this->child2_tg, 0, 15 ) ),
-					'child3_fname'    => stripslashes( $this->child3_fname ),
-					'child3_sname'    => stripslashes( $this->child3_sname ),
-					'child3_tg'       => stripslashes( substr( $this->child3_tg, 0, 15 ) ),
-					'parent_comment'  => stripslashes( $this->parent_comment ),
+					'mis_id'          => intval( $this->mis_id ),
+					'external_mis_id' => stripslashes( $this->external_mis_id ),
+					'title'           => stripslashes( $this->title ),
+					'forename'        => stripslashes( $this->forename ),
+					'surname'         => stripslashes( $this->surname ),
+					'email'           => stripslashes( strtolower( $this->email ) ),
 					'date_created'    => stripslashes( $this->date_created ),
 					'date_updated'    => date( 'Y-m-d H:i:s' ),
+					'date_approved'   => stripslashes( $this->date_approved ),
+					'date_synced'     => stripslashes( $this->date_synced ),
 					'status'          => stripslashes( $this->status ),
-					'remote_ip_addr'  => stripslashes( $this->remote_ip_addr ),
-					'request_type'    => stripslashes( $this->request_type ),
 				),
 				array(
 					'id'		  => $this->id
 				),
 				array(
-					'%s',               // parent_title
-					'%s',               // parent_fname
-					'%s',               // parent_sname
-					'%s',               // child_fname
-					'%s',               // child_sname
-					'%s',               // child_tg
-					'%s',               // parent_email
-					'%s',               // child2_fname
-					'%s',               // child2_sname
-					'%s',               // child2_tg
-					'%s',               // child3_fname
-					'%s',               // child3_sname
-					'%s',               // child3_tg
-					'%s',               // parent_comment
+					'%d',               // mis_id
+					'%s',               // external_mis_id
+					'%s',               // title
+					'%s',               // forename
+					'%s',               // surname
+					'%s',               // email
 					'%s',               // date_created
-					'%s',		    // date_updated
-					'%s',               // status
-					'%s',               // remote_ip_addr
-					'%s'		    // request_type	
+					'%s',               // date_updated
+					'%s',               // date_approved
+					'%s',               // date_synced
+					'%s'                // status
 				),
 				array(
 					'%d'		    // id
 				)
 			);
 
+			$this->logger->debug( sprintf( __( 'Updated %s. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $affected_rows ) );
 			return $affected_rows;
 
 		}
@@ -666,6 +587,13 @@ class TVS_PMP_Request {
 	 */
 	public static function update_pending_count() {
 		set_transient( 'tvs-moodle-parent-provisioning-pending-requests', TVS_PMP_Request::get_pending_count(), 3600 );
+	}
+
+	/**
+	 * Return a string representation of the object.
+	 */
+	public function __toString() {
+		return sprintf( __( '[Contact]%d: MIS ID: %d, external MIS ID: %s, %s %s %s', 'tvs-moodle-parent-provisioning' ), $this->id, $this->mis_id, $this->external_mis_id, $this->title, $this->forename, $this->surname );
 	}
 
 
