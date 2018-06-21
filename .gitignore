@@ -1,4 +1,5 @@
 tvs-pmp-provision-db.php
+php.tags
 *.swp
 vendor/
 vendor/*

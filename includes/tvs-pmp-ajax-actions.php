@@ -271,7 +271,7 @@ class TVS_PMP_Ajax_Actions {
                         )
                 );
 
-		return $repsonse;
+		return $response;
 	}
 
 

@@ -162,9 +162,25 @@ class TVS_PMP_Request {
 		'rejected',
 		'duplicate',
 		'bogus',
-		'unknown'
+		'unknown',
+		'deleting' /* temporary status for deprovisioning when a row is being permanently deleted */
 	);
 
+	/*
+	 * Valid statuses that the record can be in when the account
+	 * is de-provisioned, meaning that the associated
+	 * auth table entry has been deleted
+	 */
+	public static $deprovisioned_statuses = array(
+		'pending',
+		'rejected',
+		'duplicate',
+		'bogus',
+		'unknown',
+		'deleting' /* temporary status for deprovisioning when a row is being permanently deleted */
+	);
+
+	//TODO managing of pupil connections via this class and the API
 
 	/**
  	 * Set up the object.
@@ -544,6 +560,89 @@ class TVS_PMP_Request {
 		);
 
 	}
+
+	/*
+	 * De-provision this account request, marking it with the specified status and
+	 * removing the entry from the auth table. This will have the effect of preventing
+	 * login to the account, but does not remove any data.
+	 *
+	 * @param string $status The new status to set for the request.
+	 */
+	public function deprovision( $status ) {
+		global $wpdb;
+
+		if ( ! $this->id ) {
+			throw new Exception( __( 'Cannot deprovision when the object is not yet initialised. Use the load() method.', 'tvs-moodle-parent-provisioning' ) );
+		}
+
+		if ( ! in_array( $status, TVS_PMP_Request::$deprovisioned_statuses ) ) {
+			throw new InvalidArgumentException(
+				sprintf( __( 'The provided status %s must be one of the statuses that are valid for deprovisioned accounts. Valid statuses are: %s', 'tvs-moodle-parent-provisioning' ),
+				$status,
+				implode( ';', TVS_PMP_Request::$deprovisioned_statuses )
+			) );
+		}
+
+                $response = $wpdb->delete( $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth',
+                        array(
+				'request_id'      =>  $id,
+                        ),
+                        array(
+                                '%d',
+                        )
+                );
+
+		if ( $response === false ) {
+			throw new Exception( __( 'Failed to delete the row from the auth table.', 'tvs-moodle-parent-provisioning' ) );
+		}
+		if ( $response < 1 )  {
+			throw new Exception( sprintf( __( '%d rows were affected when trying to delete the row from the auth table.', 'tvs-moodle-parent-provisioning' ), $response ) );
+		}
+
+		// removed from auth table successfully
+
+		$before_tz = "";
+		$this->set_timezone_for_wp( $before_tz );
+		$this->append_system_comment( sprintf(
+			__( 'De-provisioned at %s %s. Status set to \'%s\'.', 'tvs-moodle-parent-provisioning' ),
+			date_i18n( get_option( 'date_format' ), time() ),
+			date_i18n( get_option( 'time_format' ), time() ),
+			$status
+		) );
+		$this->unset_timezone_for_wp( $before_tz );
+		
+		$this->status = $status;
+		$this->save();
+
+	}
+
+
+	/*
+	 * Permanently delete the request entirely from the system. Note that this should not be
+	 * used for merely deprovisioning an account.
+	 */
+	public function delete() {
+
+	}
+
+	/*
+	 * Set the current timezone in PHP to the WordPress timezone so that we are able
+	 * to add accurate timestamps to comments and modified dates etc.
+	 *
+	 * Please call unset_timezone_for_wp() when done.
+	 */
+	protected function set_timezone_for_wp( &$before_tz ) {
+		$before_tz = @date_default_timezone_get();
+		date_default_timezone_set( get_option( 'timezone_string' ) );
+	}
+
+	/*
+	 * Restore timezone settings to normal after using set_timezone_for_wp().
+	 */
+	protected function unset_timezone_for_wp( $before_tz ) {
+		date_default_timezone_set( $before_tz );
+	}
+
 
 	/**
 	 * Get the current count of how many requests are in the 'pending' status.

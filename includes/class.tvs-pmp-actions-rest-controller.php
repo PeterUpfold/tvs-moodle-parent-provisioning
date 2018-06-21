@@ -84,6 +84,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 
 			return true;
 		}
+
 		
 		/**
 		 * Register our Ajax actions which use the WP-JSON API for external access by the
@@ -113,6 +114,14 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => array( $this, 'get_item_permissions_check' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( $this, 'update_item' ),
+					'permission_callback' => function() {
+									return current_user_can( TVS_PMP_REQUIRED_CAPABILITY );
+								},
+					'args'                => $this->get_endpoint_args()
 				)
 			) );
 
@@ -385,10 +394,85 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 				return new WP_REST_Response( $parent_account_request );
 			}
 			
-			return new WP_Error();
-			//TODO verify that this works when JSON is received
+			return new WP_Error( 'rest_post_invalid_id', __( 'Invalid post ID.' ) );
 		}
 
+		/**
+		 * Update a single Parent Moodle Account request object.
+		 * 
+		 * @param WP_REST_Request $request Full details about the request.
+		 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+		 */
+		public function update_item( $request ) {
+			
+			$id = $request->get_param( 'id' );
+
+			if ( $id === null ) {
+				return new WP_Error( 'tvs_pmp_no_item_id',
+					__( 'An \'id\' parameter was not supplied or was not valid.', 'tvs-moodle-parent-provisioning' )
+				);
+			}
+
+			$parent_account_request = new TVS_PMP_Request();
+			$parent_account_request->id = $id;
+
+			if ( ! $parent_account_request->load() ) {
+				return new WP_Error( 'rest_post_invalid_id', __( 'Invalid post ID.' ) );
+			}
+			
+			// update fields
+			$parent_account_request->parent_title = $request->get_param('parent_title');
+			$parent_account_request->parent_fname = $request->get_param('parent_fname');
+			$parent_account_request->parent_sname = $request->get_param('parent_sname');
+			$parent_account_request->child_fname = $request->get_param('child_fname');
+			$parent_account_request->child_sname = $request->get_param('child_sname');
+			$parent_account_request->child_tg = $request->get_param('child_tg');
+			$parent_account_request->parent_email = $request->get_param('parent_email');
+			$parent_account_request->child2_fname = $request->get_param('child2_fname');
+			$parent_account_request->child2_sname = $request->get_param('child2_sname');
+			$parent_account_request->child2_tg = $request->get_param('child2_tg');
+			$parent_account_request->child3_fname = $request->get_param('child3_fname');
+			$parent_account_request->child3_sname = $request->get_param('child3_sname');
+			$parent_account_request->child3_tg = $request->get_param('child3_tg');
+			$parent_account_request->status = $request->get_param('status');
+			$parent_account_request->parent_comment = $request->get_param('parent_comment');
+			$parent_account_request->staff_comment = $request->get_param('staff_comment');
+			$parent_account_request->system_comment = $request->get_param('system_comment');
+			$parent_account_request->date_created = $request->get_param('date_created');
+			$parent_account_request->date_updated = $request->get_param('date_updated');
+			$parent_account_request->date_approved = $request->get_param('date_approved');
+			$parent_account_request->remote_ip_addr = $request->get_param('remote_ip_addr');
+			$parent_account_request->provisioned_username = $request->get_param('provisioned_username');
+			$parent_account_request->provisioned_initialpass = $request->get_param('provisioned_initialpass');
+			$parent_account_request->request_type = $request->get_param('request_type');
+
+
+			return rest_ensure_response( $parent_account_request->save() );
+
+		}
+
+		/**
+		 * Delete a single Parent Moodle Account request. Note that this should not be used
+		 * merely to deprovision an account -- this removes all trace of the request from the system.
+		 * @param WP_REST_Request $request Full details about the request.
+		 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+		 */
+		public function delete_item( $request ) {
+			$id = $request->get_param( 'id' );
+
+			if ( $id === null ) {
+				return new WP_Error( 'tvs_pmp_no_item_id',
+					__( 'An \'id\' parameter was not supplied or was not valid.', 'tvs-moodle-parent-provisioning' )
+				);
+			}
+
+			$parent_account_request = new TVS_PMP_Request();
+			$parent_account_request->id = $id;
+
+			if ( ! $parent_account_request->load() ) {
+				return new WP_Error( 'rest_post_invalid_id', __( 'Invalid post ID.' ) );
+			}
+		}
 
 
 	
