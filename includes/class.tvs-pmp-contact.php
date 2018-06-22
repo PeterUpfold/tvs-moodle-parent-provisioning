@@ -142,12 +142,33 @@ class TVS_PMP_Contact {
 
 
 	/**
+	 * Instance of a mysqli object that can fetch data from the Moodle database.
+	 */
+	protected $dbc = NULL;
+
+	/**
+	 * The TVS_PMP_mdl_user object that represents the Moodle user associated with this Contact.
+	 */
+	protected $mdl_user = NULL;
+
+	/**
+	 * Cache of Contact Mappings that are associated with this Contact.
+	 */
+	protected $contact_mappings = array();
+
+
+	/**
 	 * Set up the object.
 	 *
 	 * @param \Monolog\Logger\Logger $logger An object used to log information 
+	 * @param mysqli $dbc An instance of a mysqli object that can fetch information from Moodle.
 	 */
-	public function __construct( $logger ) {
+	public function __construct( $logger, $dbc ) {
 		$this->logger = $logger;
+		if ( !( $dbc instanceof \mysqli ) ) {
+			throw new ArgumentException( __( 'You must pass an instance of a mysqli object that can fetch the information from Moodle.', 'tvs-moodle-parent-provisioning' ) );
+		}
+		$this->dbc = $dbc;
 	}
 
 	/**
@@ -165,7 +186,7 @@ class TVS_PMP_Contact {
 			throw new InvalidArgumentException( $error );
 		}
 		
-		$table_name = TVS_PMP_Request::$table_name;
+		$table_name = TVS_PMP_Contact::$table_name;
 
 		$this->logger->debug( sprintf( __( 'Load Contact with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->id, $table_name ) );
 
@@ -192,6 +213,8 @@ class TVS_PMP_Contact {
 			$this->date_approved = $row->date_approved;
 			$this->date_synced = $row->date_synced;
 
+			$this->mdl_user = new TVS_PMP_mdl_user( $this->email, $this->logger, $this->dbc );
+
 			$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 
 			return true;
@@ -215,7 +238,7 @@ class TVS_PMP_Contact {
 	 * Load all requests currently in the specified state and return an array of objects of this type.
 	 * @param $state The status of the requests
 	 *
-	 * @return array of TVS_PMP_Request
+	 * @return array of TVS_PMP_Contact
 	 */
 	public static function load_all( $state ) {
 		global $wpdb;
@@ -542,6 +565,55 @@ class TVS_PMP_Contact {
 
 	}
 
+
+	/**
+	 * Determine whether or not an associated mdl_user exists for this Contact.
+	 *
+	 * @return bool
+	 */
+	public function does_mdl_user_exist() {
+		return !( $this->mdl_user->is_orphaned() );
+	}
+
+	/**
+	 * Retrieve all the Contact Mappings associated with this Contact.
+	 *
+	 * @param $force_reload bool Whether or not to force reloading the Mappings from the database, ignoring the cache.
+	 *
+	 * @return array of TVS_PMP_Contact_Mapping
+	 */
+	public function get_contact_mappings( $force_reload = false ) {
+		global $wpdb;
+
+		if ( count( $this->contact_mappings ) > 0 && ! $force_reload ) {
+			$this->logger->debug( sprintf( __( 'Return %d cached Contact Mappings', 'tvs-moodle-parent-provisioning' ), count( $this->contact_mappings ) ) );
+			return $this->contact_mappings;
+		}
+
+		$table_name = TVS_PMP_Contact_Mapping::$table_name;
+		$query = $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}{$table_name} WHERE contact_id = %d",
+			$this->id
+		);	
+
+		$results = $wpdb->get_results( $query );
+
+		if ( count( $results ) > 0) {
+			$this->logger->debug( sprintf( __( 'Fetched %d Contact Mappings associated with %s', 'tvs-moodle-parent-provisioning' ), count( $results ), $this->__toString() ) );
+
+			foreach( $results as $result ) {
+				$contact_mapping = new TVS_PMP_Contact_Mapping();
+				$contact_mapping->load_from_row( $result );
+				$this->contact_mappings[] = $contact_mapping;
+			}
+
+			return $this->contact_mappings;
+		}
+
+		$this->logger->debug( sprintf( __( 'No Contact Mappings for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) ) ;
+		return $this->contact_mappings;
+
+	}
 
 	/*
 	 * Permanently delete the request entirely from the system. Note that this should not be

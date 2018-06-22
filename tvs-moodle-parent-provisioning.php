@@ -104,6 +104,7 @@ class TVS_Parent_Moodle_Provisioning {
 			username varchar(255) NOT NULL,
 			date_synced datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
 			KEY mis_id (mis_id),
+			KEY contact_id (contact_id),
 			KEY external_mis_id (external_mis_id),
 			KEY adno (adno)
 		) $charset_collate;";

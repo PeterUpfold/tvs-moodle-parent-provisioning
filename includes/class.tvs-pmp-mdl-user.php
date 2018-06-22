@@ -43,6 +43,11 @@ class TVS_PMP_mdl_user {
 	protected $dbc = null;
 
 	/**
+	 * Reference to an object that we can use to make log entries.
+	 */
+	protected $logger = null;
+
+	/**
 	 * The user ID within the mdl_users table.
 	 */
 	public $id = null;
@@ -50,7 +55,7 @@ class TVS_PMP_mdl_user {
 	/** 
 	 * Construct the object
 	 */
-	public function __construct( $username, $dbc ) {
+	public function __construct( $username, $logger, $dbc ) {
 		$this->username = $username;
 		
 		if ( !( $dbc instanceof \mysqli ) ) {
@@ -62,7 +67,18 @@ class TVS_PMP_mdl_user {
 		}
 
 		$this->dbc = $dbc;
+		$this->logger = $logger;
 
+	}
+
+	/**
+	 * Load information about this Moodle user from the mdl_user into the 
+	 * properties of this class.
+	 *
+	 * @return bool false if the load failed
+	 */
+	public function load() {
+		return ! ($this->is_orphaned() );
 	}
 
 	/**
@@ -84,7 +100,8 @@ class TVS_PMP_mdl_user {
 
 		if ( $stmt->num_rows > 0 ) {
 			$stmt->fetch();
-			$this->id = $id; 
+			$this->id = $id;
+			$this->logger->debug( sprintf( __( 'Found mdl_user ID %d to match %s', 'tvs-moodle-parent-provisioning' ), $this->id, $this->username ) );
 			return false;
 		}
 		else {
@@ -114,6 +131,123 @@ class TVS_PMP_mdl_user {
 
 		$wpdb->query( $query );
 
+	}
+
+	/**
+	 * Set the mnethostid for the specified user.
+	 * The mnethostid is a numeric ID that Moodle uses to identify different sites to allow inter-site communication. Typically we will
+	 * want to set this user to be a local user (i.e. the local site's mnethostid)
+	 *
+	 * @param int mnethostid The target mnethostid -- 
+	 * @param string auth The authentication plugin with which this user is associated. Will be 'db' for external database.
+	 *
+	 * @return int The number of rows affected.
+	 */
+	public function set_mnethostid( $mnethostid, $auth ) {
+
+		if ( $this->id === NULL ) {
+			$this->load();
+		}
+
+		$this->logger->debug( sprintf( __( 'Preparing to set mnethostid for this->id %d: mnethostid %d, auth %s', 'tvs-moodle-parent-provisioning' ), $this->id, $mnethostid, $auth ) );
+
+		$stmt = $this->dbc->prepare( "UPDATE {$this->dbprefix}user SET mnethostid = ? WHERE auth = ? AND id = ?"this->mdl_user
+		if ( ! $stmt ) {
+			throw new Exception( sprintf( __( 'Failed to prepare the database statement to set mnethostid. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+		}
+
+		$stmt->bind_param( 'isi', $mnethostid, $auth, $this->id );
+		$stmt->execute();
+
+		$this->logger->debug( sprintf( __( 'Set mnethostid to %d for user %d with auth type %s. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $mnethostid, $this->id, $auth, $stmt->affected_rows ) );
+
+		$rows = $stmt->affected_rows;
+
+		$stmt->close();
+
+		return $rows;
+	}
+
+
+	/**
+	 * Determine if a role assignment exists for the specified user in the given context. If so, return the role assignment id.
+	 *
+	 * @param int roleid Typically this will be the ID of the parent role
+	 * @param int contextid The contextid is linked to a category, course or other entity within Moodle. It can be determined by going to assign roles and checking for the contextid in the URL.
+	 *
+	 * @return int role assignment id, or 0 if no results
+	 */
+	public function get_role_assignment( $roleid, $contextid ) {
+
+		if ( $this->id === NULL ) {
+			$this->load();
+		}
+
+		$this->logger->debug( sprintf( __( 'Determine role assignment for user %d with role %d in context %d', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
+
+		$stmt = $this->dbc->prepare( "SELECT id FROM {$this->dbprefix}role_assignments WHERE roleid = ? AND contextid = ? AND this->id = ?" );
+
+		if ( ! $stmt ) {
+			throw new Exception( sprintf( __( 'Failed to prepare the database statement to get role assignments. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+		}
+
+		$stmt->bind_param( 'iii', $roleid, $contextid, $this->id );
+		$stmt->execute();
+		$stmt->store_result();
+
+		if ( $stmt->num_rows < 1 ) {
+			// no results
+			$this->logger->info( sprintf( __( 'User %d does not currently have the role %d assigned in context %d.', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
+			return 0;
+		}
+
+		$stmt->bind_result( $role_assignment_id );
+		$stmt->fetch();
+		$stmt->close();
+
+		if ( empty( $role_assignment_id ) || ! is_int( $role_assignment_id ) ) {
+			throw new Exception( sprintf( __( 'Returned role assignment ID was empty or not an integer.', 'tvs-moodle-parent-provisioning' ) ) );
+		}
+
+		$this->logger->info( sprintf( __( 'Returned role assignment ID is %d', 'tvs-moodle-parent-provisioning' ), $role_assignment_id ) );
+	
+		return $role_assignment_id;
+
+	}
+
+	/**
+	 * Add a role assignment in the specified context to the specified user.
+	 *
+	 * @param int roleid The role ID to assign. Usually will be the parent role ID.
+	 * @param int contextid The contextid is linked to a category, course or other entity within Moodle. It can be determined by going to assign roles and checking for the contextid in the URL.
+	 * @param int modifierid The user ID considered to have made the change for audit purposes.
+	 * @param string component Optional string for the Moodle component that added the role assignment.
+	 * @param int itemid
+	 * @param int sortorder
+	 *
+	 * @return int The number of affected rows.
+	 */
+	public function add_role_assignment( $roleid, $contextid, $modifierid, $component = '', $itemid = 0, $sortorder = 0 ) {
+		$this->logger->debug( sprintf( __( 'Add role assignment for user %d with role %d in context %d', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
+
+		$stmt = $this->dbc->prepare( "INSERT INTO {$this->dbprefix}role_assignments ( roleid, contextid, this->id, timemodified, modifierid, component, itemid, sortorder ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? )" );
+
+		if ( ! $stmt ) {
+			throw new Exception( sprintf( __( 'Failed to prepare the database statement to add a role assignment. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+		}
+
+		$time = time();
+		$stmt->bind_param( 'iiiiisii', $roleid, $contextid, $this->id, $time, $modifierid, $component, $itemid, $sortorder );
+		$stmt->execute();
+		$stmt->store_result();
+
+		$this->logger->info( sprintf( __( 'Added role assignment: role %d for user %d in context %d. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $roleid, $this->id, $contextid, $stmt->affected_rows ) );
+
+		$rows = $stmt->affected_rows;
+
+		$stmt->close();
+
+		return $rows;
 	}
 
 
