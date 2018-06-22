@@ -354,7 +354,7 @@ class TVS_PMP_Contact {
 		global $wpdb;
 
 		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
-			throw new InvalidArgumentException( 'The $id variable must be set to a non-zero integer.' );
+			throw new InvalidArgumentException( __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' ) );
 		}
 
 		if ( empty( $this->status ) || $this->status != 'pending' ) {
@@ -362,7 +362,9 @@ class TVS_PMP_Contact {
 		}
 
 		$new_status = 'approved';
-		$new_sys_comment = $this->system_comment . PHP_EOL . sprintf( __( 'Approved for provisioning at %s -- awaiting next provision cycle', 'tvs-moodle-parent-provisioning' ), date('j F Y H:i:s T'));
+		$approved_text = sprintf( __( '%s Approved for provisioning at %s -- awaiting next provision cycle', 'tvs-moodle-parent-provisioning' ), $this->__toString(), date('j F Y H:i:s T'));
+		$this->logger->info( $approved_text );
+		$new_sys_comment = $this->system_comment . PHP_EOL . $approved_text;
 
 		$wpdb->update( 	$wpdb->prefix .'tvs_parent_moodle_provisioning',
 			array(
@@ -386,14 +388,15 @@ class TVS_PMP_Contact {
 		$exists = $wpdb->get_results( $wpdb->prepare(
 			'SELECT id FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth WHERE parent_email = %s',
 			array(
-				$this->parent_email
+				$this->email
 			)
 		) );
 
 		if ( count( $exists ) > 0 ) {
 				$new_status = 'duplicate';
-
-			$new_sys_comment .= PHP_EOL . __( 'Unable to provision, as email address already exists in external users table -- ', 'tvs-moodle-parent-provisioning' ) . date( 'j F Y H:i:s T');
+	
+			$dupl_comment = sprintf( __( 'Unable to provision %s, as email address \'%s\' already exists in external users table -- %s', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->email, date( 'j F Y H:i:s T') );
+			$new_sys_comment .= PHP_EOL . 
 
 			$wpdb->update( 	$wpdb->prefix .'tvs_parent_moodle_provisioning',
 				array(
@@ -412,17 +415,17 @@ class TVS_PMP_Contact {
 			 );
 			
 			throw new TVS_PMP_Parent_Account_Duplicate_Exception(
-				__( 'Unable to provision, as email address already exists in external users table. Marked as duplicate.', 'tvs-moodle-parent-provisioning' )
+				sprintf( __( 'Unable to provision %s, as email address already exists in external users table. Marked as duplicate.', 'tvs-moodle-parent-provisioning' ), $this->__toString() )
 				);
 	
 		}
 
                 // add to external Moodle auth table and wait there until the next cron-initiated provision cycle
-                $username = strtolower( $this->parent_email );
-                $parent_title = $this->parent_title;
-                $parent_fname = $this->parent_title . ' ' . $this->parent_fname;
-                $parent_sname = $this->parent_sname;
-                $parent_email = strtolower( $this->parent_email );
+                $username = strtolower( $this->email );
+                $title = $this->title;
+                $forename = $this->title . ' ' . $this->forename;
+                $surname = $this->surname;
+                $email = strtolower( $this->email );
                 $description = __( 'Parent Moodle Account', 'tvs-moodle-parent-provisioning' );
 
                 // add to external Moodle table
@@ -430,10 +433,10 @@ class TVS_PMP_Contact {
                 $response = $wpdb->insert( $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth',
                         array(
                                 'username'        =>  $username,
-                                'parent_title'    =>  $parent_title,
-                                'parent_fname'    =>  $parent_fname,
-                                'parent_sname'    =>  $parent_sname,
-                                'parent_email'    =>  $parent_email,
+                                'parent_title'    =>  $title,
+                                'parent_fname'    =>  $forename,
+                                'parent_sname'    =>  $surname,
+                                'parent_email'    =>  $email,
                                 'description'     =>  $description,
 				'request_id'      =>  $this->id,
                         ),
@@ -447,6 +450,8 @@ class TVS_PMP_Contact {
 				'%d'
                         )
                 );
+
+		$this->logger->debug( sprintf( __( 'Added %d row to the auth table for %s', 'tvs-moodle-parent-provisioning' ), $response, $this->__toString() ) );
 
 		return $response;
 
