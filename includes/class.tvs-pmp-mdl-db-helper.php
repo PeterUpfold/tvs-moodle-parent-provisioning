@@ -136,7 +136,35 @@ class TVS_PMP_MDL_DB_Helper {
                return $rows;
        }
 
+	/**
+	 * Add a new context and return the new context ID.
+	 *
+	 * @param int contextlevel The scope of the context. Pass one of the CONTEXT_ constants defined in this class.
+	 * @param int instanceid The ID of the instance to which this context relates -- a user ID, course category ID, etc. Which of these identifiers this represents is depends upon the contextlevel.
+	 * @param int depth How deep into the context tree to insert
+	 *
+	 * @return int The ID of the new context
+	 */
+	public function add_context( int $contextlevel, int $instanceid, int $depth ) {
+		$this->logger->debug( sprintf( __( 'Add context for contextlevel %d with instance ID %d and depth %d', 'tvs-moodle-parent-provisioning' ), $contextlevel, $instanceid, $depth ) );
+
+		$stmt = $this->dbc->prepare( "INSERT INTO {$this->dbprefix}context (contextlevel, instanceid, depth) VALUES (?, ?, ?)" );
+
+		if ( ! $stmt ) {
+			throw new Exception( sprintf( __( 'Failed to prepare the database statement to add context. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+		}
+
+		$stmt->bind_param( 'iii', $contextlevel, $instanceid, $depth );
+		$stmt->execute();
+
+		$new_id = $stmt->insert_id;
+		$stmt->close();
+		$this->logger->info( sprintf( __( 'Returned new context ID is %d', 'tvs-moodle-parent-provisioning' ), $new_id ) );
 	
+		return $new_id;	
+
+	}
+
 
 };
 

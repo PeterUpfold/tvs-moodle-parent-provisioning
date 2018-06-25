@@ -744,7 +744,8 @@ class TVS_PMP_Contact {
 	}
 
 	/**
-	 * Find all the "Contexts to Add Role" contexts specified in the plugin settings, and assign the role in each of these contexts to the specified user.
+	 * Find all the "Contexts to Add Role" contexts specified in the plugin settings,
+	 * and assign the role in each of these contexts to the specified user.
 	 *
 	 * @return boolean Success or failure
 	 */
