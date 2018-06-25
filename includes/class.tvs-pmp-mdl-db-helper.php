@@ -107,44 +107,6 @@ class TVS_PMP_MDL_DB_Helper {
 		$stmt->close();
 
 	}
-
-       /**
-        * Add a role assignment in the specified context to the specified user.
-        *
-        * @param int roleid The role ID to assign. Usually will be the parent role ID.
-        * @param int contextid The contextid is linked to a category, course or other entity within Moodle. It can be determined
-	* by going to assign roles and checking for the contextid in the URL.
-        * @param int modifierid The user ID considered to have made the change for audit purposes.
-        * @param string component Optional string for the Moodle component that added the role assignment.
-        * @param int itemid
-        * @param int sortorder
-        *
-        * @return int The ID of the new role assignment.
-        */
-       public function add_role_assignment( $userid, $roleid, $contextid, $modifierid, $component = '', $itemid = 0, $sortorder = 0 ) {
-               $this->logger->debug( sprintf( __( 'Add role assignment for user %d with role %d in context %d', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
-
-               $stmt = $this->dbc->prepare( "INSERT INTO {$this->dbprefix}role_assignments ( roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? )" );
-
-               if ( ! $stmt ) {
-                       throw new Exception( sprintf( __( 'Failed to prepare the database statement to add a role assignment. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
-               }
-
-               $time = time();
-               $stmt->bind_param( 'iiiiisii', $roleid, $contextid, $userid, $time, $modifierid, $component, $itemid, $sortorder );
-               $stmt->execute();
-               $stmt->store_result();
-
-               $this->logger->info( sprintf( __( 'Added role assignment %d: role %d for user %d in context %d. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $stmt->insert_id, $roleid, $userid, $contextid, $stmt->affected_rows ) );
-
-               $rows = $stmt->affected_rows;
-	       $new_id = $stmt->insert_id;
-
-               $stmt->close();
-
-               return $new_id;
-       }
-
 	/**
         * Remove the specified role assignment by its ID.
         *
@@ -174,49 +136,6 @@ class TVS_PMP_MDL_DB_Helper {
                return $rows;
        }
 
-
-       /**
-        * Determine if a role assignment exists for the specified user in the given context. If so, return the role assignment id.
-	*
-	* @param int userid The Moodle user ID
-        * @param int roleid Typically this will be the ID of the parent role
-        * @param int contextid The contextid is linked to a category, course or other entity within Moodle. It can be determined by going to assign roles and checking for the contextid in the URL.
-        *
-        * @return int role assignment id, or 0 if no results
-        */
-       public function get_role_assignment( $userid, $roleid, $contextid ) {
-
-               $this->logger->debug( sprintf( __( 'Determine role assignment for user %d with role %d in context %d', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
-
-               $stmt = $this->dbc->prepare( "SELECT id FROM {$this->dbprefix}role_assignments WHERE roleid = ? AND contextid = ? AND userid = ?" );
-
-               if ( ! $stmt ) {
-                       throw new Exception( sprintf( __( 'Failed to prepare the database statement to get role assignments. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
-               }
-
-               $stmt->bind_param( 'iii', $roleid, $contextid, $userid );
-               $stmt->execute();
-               $stmt->store_result();
-
-               if ( $stmt->num_rows < 1 ) {
-                       // no results
-                       $this->logger->info( sprintf( __( 'User %d does not currently have the role %d assigned in context %d.', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
-                       return 0;
-               }
-
-               $stmt->bind_result( $role_assignment_id );
-               $stmt->fetch();
-               $stmt->close();
-
-               if ( empty( $role_assignment_id ) || ! is_int( $role_assignment_id ) ) {
-                       throw new Exception( sprintf( __( 'Returned role assignment ID was empty or not an integer.', 'tvs-moodle-parent-provisioning' ) ) );
-               }
-
-               $this->logger->info( sprintf( __( 'Returned role assignment ID is %d', 'tvs-moodle-parent-provisioning' ), $role_assignment_id ) );
-
-               return $role_assignment_id;
-
-       }
 	
 
 };

@@ -206,6 +206,7 @@ class TVS_PMP_Contact {
 			$this->id = (int) $row->id;
 			$this->mis_id = $row->mis_id;
 			$this->external_mis_id = $row->external_mis_id;
+			$this->mdl_user_id = $row->mdl_user_id;
 			$this->title = $row->title;
 			$this->forename = $row->forename;
 			$this->surname = $row->surname;
@@ -219,13 +220,12 @@ class TVS_PMP_Contact {
 			$this->date_synced = $row->date_synced;
 
 			$this->mdl_user = new TVS_PMP_mdl_user( $this->email, $this->logger, $this->dbc );
-
 			$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 
 			return true;
 		}
 
-		$this->logger->warning( sprintf( __( 'Did not succeed at fetching a database row for Contact %d. (This is our ID, not the MIS ID).', 'tvs-moodle-parent-provisioning' ), $this->id ) );
+		$this->logger->debug( sprintf( __( 'Did not succeed at fetching a database row for Contact %d. (This is our ID, not the MIS ID).', 'tvs-moodle-parent-provisioning' ), $this->id ) );
 		return false;
 
 	}
@@ -233,10 +233,10 @@ class TVS_PMP_Contact {
 	/**
 	 * Load all requests currently in the 'approved' state and return an array of objects of this type.
 	 *
-	 * @return array of TVS_PMP_Request
+	 * @return array of TVS_PMP_Contact
 	 */
 	public static function load_all_approved() {
-		return TVS_PMP_Request::load_all( 'approved' );
+		return TVS_PMP_Contact::load_all( 'approved' );
 	}
 
 	/**
@@ -261,7 +261,7 @@ class TVS_PMP_Contact {
 		$request_objs = array();
 
 		foreach( $requests_raw as $row ) {
-			$request = new TVS_PMP_Request();
+			$request = new TVS_PMP_Contact();
 			$request->id = (int) $row->id;
 			$request->mis_id = $row->mis_id;
 			$request->external_mis_id = $row->external_mis_id;
@@ -298,7 +298,7 @@ class TVS_PMP_Contact {
 			$this->logger->debug( __( 'ID was not set, so creating a new Contact.', 'tvs-moodle-parent-provisioning' ) );
 
 			$affected_rows = $wpdb->insert(
-				( $wpdb->prefix . TVS_PMP_Request::$table_name ),
+				( $wpdb->prefix . TVS_PMP_Contact::$table_name ),
 				array(
 					'mis_id'          => intval( $this->mis_id ),
 					'external_mis_id' => stripslashes( $this->external_mis_id ),
@@ -332,7 +332,7 @@ class TVS_PMP_Contact {
 		else {
 			$this->logger->debug( sprintf( __( 'ID was set, so updating %s.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 			$affected_rows = $wpdb->update(
-				( $wpdb->prefix . TVS_PMP_Request::$table_name ),
+				( $wpdb->prefix . TVS_PMP_Contact::$table_name ),
 				array(
 					'mis_id'          => intval( $this->mis_id ),
 					'external_mis_id' => stripslashes( $this->external_mis_id ),
@@ -414,7 +414,7 @@ class TVS_PMP_Contact {
 
 		// check for pre-existence of a parent with this email
 		$exists = $wpdb->get_results( $wpdb->prepare(
-			'SELECT id FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth WHERE parent_email = %s',
+			'SELECT id FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth WHERE email = %s',
 			array(
 				$this->email
 			)
@@ -529,11 +529,11 @@ class TVS_PMP_Contact {
 			throw new Exception( __( 'Cannot deprovision when the object is not yet initialised. Use the load() method.', 'tvs-moodle-parent-provisioning' ) );
 		}
 
-		if ( ! in_array( $status, TVS_PMP_Request::$deprovisioned_statuses ) ) {
+		if ( ! in_array( $status, TVS_PMP_Contact::$deprovisioned_statuses ) ) {
 			throw new InvalidArgumentException(
 				sprintf( __( 'The provided status %s must be one of the statuses that are valid for deprovisioned accounts. Valid statuses are: %s', 'tvs-moodle-parent-provisioning' ),
 				$status,
-				implode( ';', TVS_PMP_Request::$deprovisioned_statuses )
+				implode( ';', TVS_PMP_Contact::$deprovisioned_statuses )
 			) );
 		}
 
@@ -607,9 +607,16 @@ class TVS_PMP_Contact {
 			$this->logger->debug( sprintf( __( 'Fetched %d Contact Mappings associated with %s', 'tvs-moodle-parent-provisioning' ), count( $results ), $this->__toString() ) );
 
 			foreach( $results as $result ) {
-				$contact_mapping = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc, $this );
-				$contact_mapping->load_from_row( $result );
-				$this->contact_mappings[] = $contact_mapping;
+				try {
+					$contact_mapping = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc, $this );
+					$contact_mapping->load_from_row( $result );
+					$this->contact_mappings[] = $contact_mapping;
+				}
+				catch ( Exception $e )  {
+					$this->logger->warning(
+						sprintf( __( 'Could not load Contact Mapping %d. Exception was \'%s\'', 'tvs-moodle-parent-provisioning' ), $result->id, $e->getMessage() )
+					);
+				}
 			}
 
 			return $this->contact_mappings;
@@ -620,11 +627,181 @@ class TVS_PMP_Contact {
 
 	}
 
+
+	/**
+	 * Add a new Contact Mapping to connect this Contact with a Moodle user (pupil).
+	 * 
+	 * @param string $adno The Admissions Number, or Moodle idnumber, for which to add the Mapping
+	 *
+	 * @return bool Success
+	 */
+	public function add_contact_mapping_by_adno( $adno, $mis_id, $mis_external_id, $username ) {
+		// try and get a Moodle user by adno
+
+		$user = new TVS_PMP_mdl_user();
+		$user->idnumber = $adno;
+
+		if ( ! $user->load( 'idnumber' ) ) {
+			throw new InvalidArgumentException( sprintf( __( 'Unable to find a matching Moodle user with idnumber (Adno) %d', 'tvs-moodle-parent-provisioning' ), $adno ) );
+		}
+
+		// find any existing contact mapping with this Adno
+		foreach( $this->get_contact_mappings() as $mapping ) {
+			if ( $adno == $mapping->get_adno() ) {
+				$this->logger->debug(
+					sprintf(
+						__( 'Contact Mapping for %d already exists: %s', 'tvs-moodle-parent-provisioning' ), $adno, $mapping 
+					)
+				);
+
+				return $mapping->map();
+
+			}
+		}
+
+		$mapping = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc, $this );
+		$mapping->contact_id = $this->id;
+		$mapping->mis_id = $mis_id;
+		$mapping->external_mis_id = $external_mis_id;
+		$mapping->adno = $adno;
+		$mapping->username = $username;
+		$mapping->mdl_user = $user;
+		$mapping->mdl_user->idnumber = $adno;
+		$mapping->mdl_user_id = $mapping->mdl_user->id;
+
+		if ( ! $mapping->save() ) {
+			throw new Exception( sprintf( __( 'Unable to save the Contact Mapping for %d (%s). The save() to the internal database failed', 'tvs-moodle-parent-provisioning' ), $adno, $username ) );
+		}
+	
+		return $mapping->map();
+	}
+
+	/**
+	 * Remove the Contact Mapping associated with this Contact, using the Admissions Number
+	 * (idnumber) of the target user.
+	 */
+	public function remove_contact_mapping_by_adno( $adno ) {
+		// find existing contact mapping with this Adno
+		foreach( $this->get_contact_mappings() as $mapping ) {
+			if ( $adno == $mapping->get_adno() ) {
+				$this->logger->debug( sprintf( __( 'Found mapping \'%s\'. Will unmap and delete.', 'tvs-moodle-parent-provisioning' ), $mapping ) );
+				$mapping->unmap();
+				return $mapping->delete();
+			}
+		}
+
+		$this->logger->warn( sprintf( __( 'Did not find a Contact Mapping to match Admissions Number (idnumber) %s', 'tvs-moodle-parent-provisioning' ), $adno ) );
+	}
+
 	/*
 	 * Permanently delete the request entirely from the system. Note that this should not be
 	 * used for merely deprovisioning an account.
 	 */
 	public function delete() {
+		global $wpdb;
+
+		if ( count( $this->get_contact_mappings( true ) ) > 0 ) {
+			throw new LogicException( sprintf( __( 'Cannot delete a Contact \'%s\' when Contact Mappings still exist for it.',  'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+		}
+
+		// refuse to operate if still provisioned
+		if ( $this->is_provisioned_and_enabled() ) {
+			throw new LogicException( sprintf( __( 'Cannot delete a Contact \'%s\' as the user is still provisioned and enabled within Moodle, or because the status of the Contact within this database is considered approved or provisioned.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+		}
+
+
+		// will have been removed from auth already by deprovisioning
+		//
+                $response = $wpdb->delete( $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact',
+                        array(
+				'id'      =>  $this->id,
+                        ),
+                        array(
+                                '%d',
+                        )
+                );
+
+		return $response;
+
+	}
+
+	/**
+	 * Determine whether the associated Moodle user is provisioned and enabled.
+	 *
+	 * @return bool
+	 */
+	public function is_provisioned_and_enabled() {
+		if ( $this->does_mdl_user_exist() && 1 != $this->mdl_user->suspended )	 {
+			return true;
+		}
+		// or if in any non-de-provisioned status
+		
+		if ( 'approved' == $this->$status || 'provisioned' == $this->status ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Find all the "Contexts to Add Role" contexts specified in the plugin settings, and assign the role in each of these contexts to the specified user.
+	 *
+	 * @return boolean Success or failure
+	 */
+	public function add_role_in_static_contexts() {
+		
+		// get the list of static contexts
+		$contexts_raw = get_option( 'tvs-moodle-parent-provisioning-contexts-to-add-role' );
+
+
+		$this->logger->info( __( 'Will now add the role assignments for all static contexts if this is not already assigned.', 'tvs-moodle-parent-provisioning' ) );
+
+		if ( ! $contexts_raw ) {
+			$this->logger->warning( __( 'There were no "Contexts to Add Role" found from the plugin settings. Therefore, we have no static contexts to set. Review the plugin Settings to ensure this is correct.', 'tvs-moodle-parent-provisioning' ) );
+			return true;
+		}
+
+		// split string by newlines
+		$contexts = explode( "\n", $contexts_raw );
+
+		if ( ! is_array( $contexts ) || count( $contexts ) < 1 ) {
+			$this->logger->warning( __( 'There were no "Contexts to Add Role" found from the plugin settings, although the option was found. Therefore, we have no static contexts to set. Review the plugin Settings to ensure this is correct.', 'tvs-moodle-parent-provisioning' ) );
+			return true;
+		}
+
+		foreach( $contexts as $context ) {
+
+			$context = trim( $context );
+			
+			if ( ! ctype_digit( $context ) ) {
+				$this->logger->warning( sprintf( __( 'Ignoring %s as it contains extraneous non-numeric characters. The context IDs must be integer values only.', 'tvs-moodle-parent-provisioning' ), $context ) );
+				continue;
+			}
+
+			$context_id = (int) $context;
+
+			if ( ! $context_id ) {
+				$this->logger->warning( __( 'Ignoring %s as it evaluates to false after casting to an integer.', 'tvs-moodle-parent-provisioning' ), $context );
+				continue;
+
+			}
+
+			// check for existing role assignment
+			$role_assignment = $this->mdl_user->get_role_assignment( $this->parent_role_id, $context_id );
+
+			if ( ! $role_assignment ) {
+				$this->logger->info( sprintf( __( 'Will add role assignment for parent %d for context %d', 'tvs-moodle-parent-provisioning' ), $parent_userid, $context_id ) );
+				$this->mdl_user->add_role_assignment( $this->parent_role_id, $context_id, $this->modifier_id, '', 0, 0 ); 
+			}
+			else {
+				$this->logger->info( sprintf( __( 'Parent with ID %d already had a role assignment for context %d', 'tvs-moodle-parent-provisioning' ), $parent_userid, $context_id ) );
+			}
+
+		}
+
+		$this->logger->info( __( 'Completed adding role assignments for static contexts.', 'tvs-moodle-parent-provisioning' ) );
+
+		return true;
 
 	}
 
@@ -668,7 +845,7 @@ class TVS_PMP_Contact {
 	 * Update the transient that stores the current pending request count.
 	 */
 	public static function update_pending_count() {
-		set_transient( 'tvs-moodle-parent-provisioning-pending-requests', TVS_PMP_Request::get_pending_count(), 3600 );
+		set_transient( 'tvs-moodle-parent-provisioning-pending-requests', TVS_PMP_Contact::get_pending_count(), 3600 );
 	}
 
 	/**

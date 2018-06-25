@@ -97,7 +97,7 @@ class TVS_PMP_Contact_Mapping {
 	 * The TVS_PMP_mdl_user object that represents the Moodle user associated with the target
 	 * of this Contact Mapping.
 	 */
-	protected $mdl_user = NULL;
+	public $mdl_user = NULL;
 
 	/**
 	 * @var TVS_PMP_Contact
@@ -174,7 +174,7 @@ class TVS_PMP_Contact_Mapping {
 			return true;
 		}
 
-		$this->logger->warning( sprintf( __( 'Did not succeed at fetching a database row for Contact Mapping %d. (This is our ID, not the MIS ID).', 'tvs-moodle-parent-provisioning' ), $this->id ) );
+		$this->logger->debug( sprintf( __( 'Did not succeed at fetching a database row for Contact Mapping %d. (This is our ID, not the MIS ID).', 'tvs-moodle-parent-provisioning' ), $this->id ) );
 		return false;
 
 	}
@@ -255,6 +255,37 @@ class TVS_PMP_Contact_Mapping {
 	}
 
 	/**
+	 * Delete this Contact Mapping from our internal database. Note that this does not unmap the Mapping
+	 * within Moodle for you; you must call unmap() first.
+	 */
+	public function delete() {
+		global $wpdb;
+
+		$table_name = TVS_PMP_Contact_Mapping::$table_name;
+
+		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
+			$error = __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
+			$this->logger->error( $error );
+			throw new InvalidArgumentException( $error );
+		}
+
+		if ( $this->is_mapped() ) {
+			// refuse to operate if still mapped
+			$error = sprintf( __( 'Cannot delete %s because the Contact Mapping is still present in the Moodle table. Run unmap() first.', 'tvs-moodle-parent-provisioning' ), $this->__toString() );
+			$this->logger->error( $error );
+			throw new LogicException( $error );
+		}
+
+		return $wpdb->delete( $table_name, array(
+			'id'                          => $this->id
+		),
+		array(
+			'%d'
+		)
+		);
+	}
+
+	/**
 	 * Load the properties of this Contact Mapping from the specified database $row
 	 * array.
 	 *
@@ -332,7 +363,7 @@ class TVS_PMP_Contact_Mapping {
 		$role_assignment = $this->get_role_assignment();
 		if ( ! $role_assignment ) {
 			// create role assignment
-			$role_assignment = $this->mdl_db_helper->add_role_assignment( $this->contact->mdl_user->id, TVS_PMP_Contact_Mapping::$target_role_id, $context, TVS_PMP_Contact_Mapping::$modifier_id, '', 0, 0 );
+			$role_assignment = $this->contact->mdl_user->add_role_assignment( TVS_PMP_Contact_Mapping::$target_role_id, $context, TVS_PMP_Contact_Mapping::$modifier_id, '', 0, 0 );
 			return $role_assignment;
 		}
 		else {
@@ -362,12 +393,21 @@ class TVS_PMP_Contact_Mapping {
 		$role_assignment = $this->get_role_assignment();
 		if ( $role_assignment ) {
 			// remove the assignment
-			return $this->mdl_db_helper->remove_role_assignment( $role_assignment );
+			return $this->contact->mdl_user->remove_role_assignment( $role_assignment );
 		}
 		else {
 			$this->logger->info( sprintf( __( 'The Contact user %s was missing the appropriate role %d assigned in the context %d for the target Contact Mapping user %s, so it could not be deleted. Role assignment ID: %d', 'tvs-moodle-parent-provisioning' ), $this->contact, TVS_PMP_Contact_Mapping::$parent_role_id, $context, $this->__toString(), $role_assignment ) );
 			return true;
 		}
+	}
+
+	/**
+	 * Get the admissions number (idnumber field within Moodle) associated with this target user.
+	 *
+	 * @return string
+	 */
+	public function get_adno() {
+		return $this->mdl_user->idnumber;
 	}
 
 	/**

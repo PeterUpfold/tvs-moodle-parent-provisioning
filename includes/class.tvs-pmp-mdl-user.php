@@ -35,27 +35,37 @@ class TVS_PMP_mdl_user {
 	 * is not connected to a mdl_user entry in the Moodle database.
 	 * Will be null if not yet determined.
 	 */
-	protected $orphaned = null;
+	protected $orphaned = NULL;
 
 	/**
 	 * A connection to the Moodle database.
 	 */
-	protected $dbc = null;
+	protected $dbc = NULL;
 
 	/**
 	 * Reference to an object that we can use to make log entries.
 	 */
-	protected $logger = null;
+	protected $logger = NULL;
 
 	/**
 	 * The user ID within the mdl_users table.
 	 */
-	public $id = null;
+	public $id = NULL;
+
+	/**
+	 * The idnumber field within Moodle, which will map to an Admissions Number (Adno).
+	 */
+	public $idnumber = NULL;
+
+	/**
+	 * Whether or not the Moodle user account is currently suspended and unable to log in.
+	 */
+	public $suspended;
 
 	/** 
 	 * Construct the object
 	 */
-	public function __construct( $username, $logger, $dbc ) {
+	public function __construct( $logger, $dbc ) {
 		$this->username = $username;
 		
 		if ( !( $dbc instanceof \mysqli ) ) {
@@ -75,10 +85,109 @@ class TVS_PMP_mdl_user {
 	 * Load information about this Moodle user from the mdl_user into the 
 	 * properties of this class.
 	 *
+	 * @param string $property The property to use to match the username to the database, i.e. 'username' or 'id' or 'idnumber'
+	 *
 	 * @return bool false if the load failed
 	 */
-	public function load() {
-		return ! ($this->is_orphaned() );
+	public function load( $property ) {
+
+		switch( $property ) {
+
+		case 'idnumber':
+			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username, idnumber, suspended FROM mdl_user WHERE idnumber = ?' ) ) {
+
+				throw new Exception( __( 'Unable to prepare query to load a Moodle user', 'tvs-moodle-parent-provisioning' ) );
+			}	
+
+				
+			$stmt->bind_param( 's', $this->idnumber );
+			$stmt->execute();
+			$stmt->bind_result( $id );
+			$stmt->bind_result( $username );
+			$stmt->bind_result( $idnumber );
+			$stmt->bind_result( $suspended );
+			$stmt->store_result();
+
+			if ( $stmt->num_rows > 0 ) {
+				$stmt->fetch();
+				$this->id = $id;
+				$this->username = $username;
+				$this->idnumber = $idnumber;
+				$this->suspended = $suspended;
+				$this->logger->debug( sprintf( __( 'Found mdl_user ID %d to match %s', 'tvs-moodle-parent-provisioning' ), $this->id, $this->idnumber ) );
+				return true;
+			}
+			else {
+				$this->logger->debug( sprintf( __( 'Did not find a user to match idnumber %s.', 'tvs-moodle-parent-provisioning' ), $this->idnumber );
+				return false;
+			}
+
+			break;
+
+		case 'id':
+			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username, idnumber, suspended FROM mdl_user WHERE id = ?' ) ) {
+
+				throw new Exception( __( 'Unable to prepare query to load a Moodle user', 'tvs-moodle-parent-provisioning' ) );
+			}	
+
+				
+			$stmt->bind_param( 'i', $this->id );
+			$stmt->execute();
+			$stmt->bind_result( $id );
+			$stmt->bind_result( $username );
+			$stmt->bind_result( $idnumber );
+			$stmt->bind_result( $suspended );
+			$stmt->store_result();
+
+			if ( $stmt->num_rows > 0 ) {
+				$stmt->fetch();
+				$this->id = $id;
+				$this->username = $username;
+				$this->idnumber = $idnumber;
+				$this->suspended = $suspended;
+				$this->logger->debug( sprintf( __( 'Found mdl_user ID %d to match %s', 'tvs-moodle-parent-provisioning' ), $this->id, $this->username ) );
+				return true;
+			}
+			else {
+				$this->logger->debug( sprintf( __( 'Did not find a user to match internal ID %d.', 'tvs-moodle-parent-provisioning' ), $this->id );
+				return false;
+			}
+
+			break;
+
+		case 'username':
+			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username FROM mdl_user WHERE username = ?' ) ) {
+
+				throw new Exception( __( 'Unable to prepare query to load a Moodle user', 'tvs-moodle-parent-provisioning' ) );
+			}	
+
+				
+			$stmt->bind_param( 's', $this->username );
+			$stmt->execute();
+			$stmt->bind_result( $id );
+			$stmt->bind_result( $username );
+			$stmt->bind_result( $idnumber );
+			$stmt->bind_result( $suspended );
+			$stmt->store_result();
+
+			if ( $stmt->num_rows > 0 ) {
+				$stmt->fetch();
+				$this->id = $id;
+				$this->username = $username;
+				$this->idnumber = $idnumber;
+				$this->suspended = $suspended;
+				$this->logger->debug( sprintf( __( 'Found mdl_user ID %d to match %s', 'tvs-moodle-parent-provisioning' ), $this->id, $this->username ) );
+				return true;
+			}
+			else {
+				$this->logger->debug( sprintf( __( 'Did not find a user to match username %s.', 'tvs-moodle-parent-provisioning' ), $this->username );
+				return false;
+			}
+
+			break;
+
+		}
+	
 	}
 
 	/**
@@ -87,26 +196,7 @@ class TVS_PMP_mdl_user {
 	 * @return bool
 	 */
 	public function is_orphaned() {
-		
-		if ( ! $stmt = $this->dbc->prepare( 'SELECT id FROM mdl_user WHERE username = ?' ) ) {
-			throw new Exception( __( 'Unable to prepare query to determine if user is orphaned', 'tvs-moodle-parent-provisioning' ) );
-		}	
-
-			
-		$stmt->bind_param( 's', $this->username );
-		$stmt->execute();
-		$stmt->bind_result( $id );
-		$stmt->store_result();
-
-		if ( $stmt->num_rows > 0 ) {
-			$stmt->fetch();
-			$this->id = $id;
-			$this->logger->debug( sprintf( __( 'Found mdl_user ID %d to match %s', 'tvs-moodle-parent-provisioning' ), $this->id, $this->username ) );
-			return false;
-		}
-		else {
-			return true;
-		}
+		return ! ( $this->load( 'username' ) );
 	}
 
 	/**
@@ -149,7 +239,7 @@ class TVS_PMP_mdl_user {
 			$this->load();
 		}
 
-		$this->logger->debug( sprintf( __( 'Preparing to set mnethostid for this->id %d: mnethostid %d, auth %s', 'tvs-moodle-parent-provisioning' ), $this->id, $mnethostid, $auth ) );
+		$this->logger->debug( sprintf( __( 'Preparing to set mnethostid for userid %d: mnethostid %d, auth %s', 'tvs-moodle-parent-provisioning' ), $this->id, $mnethostid, $auth ) );
 
 		$stmt = $this->dbc->prepare( "UPDATE {$this->dbprefix}user SET mnethostid = ? WHERE auth = ? AND id = ?"this->mdl_user
 		if ( ! $stmt ) {
@@ -230,7 +320,7 @@ class TVS_PMP_mdl_user {
 	public function add_role_assignment( $roleid, $contextid, $modifierid, $component = '', $itemid = 0, $sortorder = 0 ) {
 		$this->logger->debug( sprintf( __( 'Add role assignment for user %d with role %d in context %d', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
 
-		$stmt = $this->dbc->prepare( "INSERT INTO {$this->dbprefix}role_assignments ( roleid, contextid, this->id, timemodified, modifierid, component, itemid, sortorder ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? )" );
+		$stmt = $this->dbc->prepare( "INSERT INTO {$this->dbprefix}role_assignments ( roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? )" );
 
 		if ( ! $stmt ) {
 			throw new Exception( sprintf( __( 'Failed to prepare the database statement to add a role assignment. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
