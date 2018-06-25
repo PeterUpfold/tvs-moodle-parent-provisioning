@@ -48,6 +48,11 @@ class TVS_PMP_Contact {
 	public $external_mis_id;
 
 	/**
+	 * The user ID within Moodle for this Contact.
+	 */
+	public $mdl_user_id;
+
+	/**
 	 * The parent's title.
 	 */
 	public $title;
@@ -602,7 +607,7 @@ class TVS_PMP_Contact {
 			$this->logger->debug( sprintf( __( 'Fetched %d Contact Mappings associated with %s', 'tvs-moodle-parent-provisioning' ), count( $results ), $this->__toString() ) );
 
 			foreach( $results as $result ) {
-				$contact_mapping = new TVS_PMP_Contact_Mapping();
+				$contact_mapping = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc, $this );
 				$contact_mapping->load_from_row( $result );
 				$this->contact_mappings[] = $contact_mapping;
 			}
