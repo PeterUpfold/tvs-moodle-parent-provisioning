@@ -75,6 +75,56 @@ class TVS_PMP_MDL_DB_Helper {
 	}
 
 	/**
+	 * Create an instance of \Monolog\Logger\Logger that we can use to log information about
+	 * the execution of this program.
+	 *
+	 * @return \Monolog\Logger\Logger
+	 */
+	public static function create_logger( &$local_log_stream ) {
+		$logger = new Logger( 'tvs-pmp-provisioner' );
+
+		$log_level = ( 'info' == get_option( 'tvs-moodle-parent-provisioning-log-level' ) ) ? Logger::INFO : Logger::DEBUG;
+		
+		$logger->pushHandler( new StreamHandler( $log_file_path, $log_level ) ); 
+		$local_log_stream = fopen( 'php://memory', 'w+' );
+		$logger->pushHandler( new StreamHandler( $local_log_stream ), $log_level );
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$logger->pushHandler( new BrowserConsoleHandler() );
+		}
+
+		ErrorHandler::register( $logger );
+
+		return $logger;
+	}
+
+	/**
+	 * Create a mysqli object for communicating with the Moodle database.
+	 *
+	 * @return mysqli
+	 */
+	public static function create_dbc( $logger ) {
+		$set_prefix = 'tvs-moodle-parent-provisioning-';
+
+		$dbc = new mysqli(
+			get_option( $set_prefix . 'moodle-dbhost' ),
+			get_option( $set_prefix . 'moodle-dbuser' ),
+			get_option( $set_prefix . 'moodle-dbpass' ),
+			get_option( $set_prefix . 'moodle-db' )
+		);
+
+		if ( $dbc->connect_error !== NULL ) {
+			$logger->error( sprintf ( __( 'Failed to initialise the database object. Connection error %d: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->connect_errno, $this->dbc->connect_error ) );
+			if ( php_sapi_name() != 'cli' ) {
+				//echo sprintf ( __( 'Failed to initialise the database object. Connection error %d: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->connect_errno, $this->dbc->connect_error );
+			}
+			return NULL;
+		}
+
+		return $dbc;
+	}
+
+	/**
 	 * Determine if a context exists and return its numeric ID.
 	 *
 	 * @param int contextlevel The scope of the context. Pass one of the CONTEXT_ constants defined in this class.

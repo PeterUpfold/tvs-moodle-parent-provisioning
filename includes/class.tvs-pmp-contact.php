@@ -179,54 +179,87 @@ class TVS_PMP_Contact {
 	/**
 	 * Given a record with the id in $this->id, load it from the database
 	 *
+	 * @param string $property Which property to use to match the object. 'id', 'external_mis_id'
+	 *
 	 * @return bool Whether or not the data was loaded.
 	 */
-	public function load() {
+	public function load( $property = 'id' ) {
 
 		global $wpdb;
 
-		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
-			$error = __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
-			$this->logger->error( $error );
-			throw new InvalidArgumentException( $error );
+		$table_name = TVS_PMP_Contact::$table_name;
+		$row = NULL;
+
+		switch( $property ) {
+
+		case 'id':
+			if ( empty( $this->id ) || ! is_int( $this->id ) ) {
+				$error = __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
+				$this->logger->error( $error );
+				throw new InvalidArgumentException( $error );
+			}
+
+			$this->logger->debug( sprintf( __( 'Load Contact with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->id, $table_name ) );
+		
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE id = %d",
+						$this->id
+				)
+			);
+			break;
+		case 'external_mis_id':
+			if ( empty( $this->external_mis_id ) ) {
+				$error = __( 'The $external_mis_id variable must be set.', 'tvs-moodle-parent-provisioning' );
+				$this->logger->error( $error );
+				throw new InvalidArgumentException( $error );
+			}
+
+			$this->logger->debug( sprintf( __( 'Load Contact with external MIS ID %s from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->external_mis_id, $table_name ) );
+		
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE external_mis_id = %s",
+						$this->external_mis_id
+				)
+			);
+			break;
 		}
 		
-		$table_name = TVS_PMP_Contact::$table_name;
-
-		$this->logger->debug( sprintf( __( 'Load Contact with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->id, $table_name ) );
-
-
-		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE id = %d",
-					$this->id
-			)
-		);
-
+	
 		if ( $row ) {
-			$this->id = (int) $row->id;
-			$this->mis_id = $row->mis_id;
-			$this->external_mis_id = $row->external_mis_id;
-			$this->mdl_user_id = $row->mdl_user_id;
-			$this->title = $row->title;
-			$this->forename = $row->forename;
-			$this->surname = $row->surname;
-			$this->email = $row->email;
-			$this->status = $row->status;
-			$this->staff_comment = $row->staff_comment;
-			$this->system_comment = $row->system_comment;
-			$this->date_created = $row->date_created;
-			$this->date_updated = $row->date_updated;
-			$this->date_approved = $row->date_approved;
-			$this->date_synced = $row->date_synced;
-
-			$this->mdl_user = new TVS_PMP_mdl_user( $this->email, $this->logger, $this->dbc );
-			$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
-
+			$this->load_from_row( $row );	
 			return true;
 		}
 
 		$this->logger->debug( sprintf( __( 'Did not succeed at fetching a database row for Contact %d. (This is our ID, not the MIS ID).', 'tvs-moodle-parent-provisioning' ), $this->id ) );
 		return false;
+
+	}
+
+	/**
+	 * Given the values in the input stdClass $row, load these into the properties of
+	 * this object.
+	 *
+	 * @param $row stdClass A database row
+	 */
+	public function load_from_row( $row ) {
+		$this->id = (int) $row->id;
+		$this->mis_id = $row->mis_id;
+		$this->external_mis_id = $row->external_mis_id;
+		$this->mdl_user_id = $row->mdl_user_id;
+		$this->title = $row->title;
+		$this->forename = $row->forename;
+		$this->surname = $row->surname;
+		$this->email = $row->email;
+		$this->status = $row->status;
+		$this->staff_comment = $row->staff_comment;
+		$this->system_comment = $row->system_comment;
+		$this->date_created = $row->date_created;
+		$this->date_updated = $row->date_updated;
+		$this->date_approved = $row->date_approved;
+		$this->date_synced = $row->date_synced;
+
+		$this->mdl_user = new TVS_PMP_mdl_user( $this->email, $this->logger, $this->dbc );
+		$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 
 	}
 
