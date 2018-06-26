@@ -290,32 +290,81 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		$this->ensure_logger_and_dbc();
 
-		// determine if we have a unique ID in the request to look up an existing record
+		// determine if we have a unique ID in the request to look up an record record
 		$id = $request->get_param( 'id' );
 		$external_mis_id =  $request->get_param( 'external_mis_id' );
-		$existing = new TVS_PMP_Contact( $this->logger, $this->dbc ); // we will 'load' this momentarily to see if it exists
+		$record = new TVS_PMP_Contact( $this->logger, $this->dbc ); // we will 'load' this momentarily to see if it exists
 
 		if ( NULL != $id ) {
-			$existing->id = $id;
-			if ( ! $existing->load() ) {
+			$record->id = $id;
+			if ( ! $record->load() ) {
 				$this->logger->warn( sprintf( __( 'Unable to load Contact with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
-				$existing = NULL;	
+				$record = NULL;	
 			}
 		}
 		else if ( NULL != $external_mis_id ) {
-			$existing->external_mis_id;
-			if ( ! $existing->load() ) {
+			$record->external_mis_id = $external_mis_id;
+			if ( ! $record->load() ) {
 				$this->logger->warn( sprintf( __( 'Unable to load Contact with external MIS ID %s', 'tvs-moodle-parent-provisioning' ), $external_mis_id ) );
-				$existing = NULL;	
+				$record = NULL;	
 			}
 		}
 		else {
 			// must be a new item
-			$existing = NULL;
+			$record = NULL;
 		}
 
+		if ( $request->get_param( 'mis_id' ) ) {
+			$record->mis_id = $request->get_param( 'mis_id' );
+		}
+		if ( $request->get_param( 'external_mis_id' ) ) {
+			$record->external_mis_id = $request->get_param( 'external_mis_id' );
+		}
+		if ( $request->get_param( 'mdl_user_id' ) ) {
+			$record->mdl_user_id = $request->get_param( 'mdl_user_id' );
+		}
+		if ( $request->get_param( 'title' ) ) {
+			$record->title = $request->get_param( 'title' );
+		}
+		if ( $request->get_param( 'forename' ) ) {
+			$record->forename = $request->get_param( 'forename' );
+		}
+		if ( $request->get_param( 'surname' ) ) {
+			$record->surname = $request->get_param( 'surname' );
+		}
+		if ( $request->get_param( 'email' ) ) {
+			$record->email = $request->get_param( 'email' );
+		}
+		if ( $request->get_param( 'status' ) ) {
+			$record->status = $request->get_param( 'status' );
+		}
+		if ( $request->get_param( 'staff_comment' ) ) {
+			$record->staff_comment = $request->get_param( 'staff_comment' );
+		}
+		if ( $request->get_param( 'date_created' ) ) {
+			$record->date_created = $request->get_param( 'date_created' );
+		}
+		if ( $request->get_param( 'date_updated' ) ) {
+			$record->date_updated = $request->get_param( 'date_updated' );
+		}
+		if ( $request->get_param( 'date_approved' ) ) {
+			$record->date_approved = $request->get_param( 'date_approved' );
+		}
+		if ( $request->get_param( 'date_synced' ) ) {
+			$record->date_synced = $request->get_param( 'date_synced' );
+		}
 
-		
+		$result = $record->save();
+
+		$this->logger->debug( sprintf( __( 'Result of saving record for %d was %d affected rows.', 'tvs-moodle-parent-provisioning' ), $record->id, $result ) );
+
+		return new WP_REST_Response(
+			array(
+				'affected_rows'  => $result,
+				$record
+			)
+		);
+
 	}
 
 

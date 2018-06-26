@@ -360,6 +360,7 @@ class TVS_PMP_Contact {
 			}
 
 			$this->status = 'pending';
+			return $affected_rows;
 
 		}
 		else {
