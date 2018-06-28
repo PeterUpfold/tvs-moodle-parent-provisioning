@@ -301,12 +301,12 @@ class TVS_PMP_Contact {
 		global $wpdb;
 
 		$requests_raw = $wpdb->get_results( $wpdb->prepare(
-			'SELECT id, mis_id, external_mis_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix .'tvs_parent_moodle_provisioning WHERE status = %s',
+			'SELECT id, mis_id, external_mis_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix .'tvs_parent_moodle_provisioning_contact WHERE status = %s',
 			$state
 		) );
 
 		if ( count( $requests_raw ) < 1 ) {
-			$this->logger->info( __( 'No Contacts were fetched with the status %s', 'tvs-moodle-parent-provisioning' ), $state );
+			//$this->logger->info( __( 'No Contacts were fetched with the status %s', 'tvs-moodle-parent-provisioning' ), $state );
 			return array();
 		}
 
@@ -329,10 +329,10 @@ class TVS_PMP_Contact {
 			$request->date_approved = $row->date_approved;
 			$request->date_synced = $row->date_synced;
 			$request_objs[] = $request;
-			$this->logger->debug( __( 'Fetched %s', 'tvs-moodle-parent-provisioning' ), $state );
+			//$this->logger->debug( __( 'Fetched %s', 'tvs-moodle-parent-provisioning' ), $state );
 		}
 
-		$this->logger->debug( sprintf( __( 'Fetched %d Contacts', 'tvs-moodle-parent-provisioning' ), count( $request_objs ) ) );
+		//$this->logger->debug( sprintf( __( 'Fetched %d Contacts', 'tvs-moodle-parent-provisioning' ), count( $request_objs ) ) );
 		return $request_objs;
 
 	}
@@ -495,7 +495,7 @@ class TVS_PMP_Contact {
 				)	
 			 );
 			
-			throw new TVS_PMP_Parent_Account_Duplicate_Exception(
+			throw new TVS_PMP_Duplicate_Exception(
 				sprintf( __( 'Unable to provision %s, as email address already exists in external users table. Marked as duplicate.', 'tvs-moodle-parent-provisioning' ), $this->__toString() )
 				);
 	
@@ -915,7 +915,7 @@ class TVS_PMP_Contact {
 /**
  * Allow us to throw a custom exception for duplicate parent accounts.
  */
-class TVS_PMP_Parent_Account_Duplicate_Exception extends Exception {
+class TVS_PMP_Duplicate_Exception extends Exception {
 	public function __construct( $message, $code = 0, Exception $previous = null ) {
 		parent::__construct( $message, $code, $previous );
 	}

@@ -53,9 +53,12 @@ class TVS_Parent_Moodle_Provisioning {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 		add_action( 'wp_ajax_tvs_moodle_parent_provisioning_upload_users', array( $this, 'handle_upload_users' ) );
 		
-		require_once( dirname( __FILE__ ) . '/includes/class.tvs-pmp-actions-rest-controller.php' );
-		$rest_controller = new TVS_PMP_Actions_REST_Controller();
+		require_once( dirname( __FILE__ ) . '/includes/class.tvs-pmp-contact-rest-controller.php' );
+		$rest_controller = new TVS_PMP_Contact_REST_Controller();
 		add_action( 'rest_api_init', array( $rest_controller, 'register_routes' ) );
+		require_once( dirname( __FILE__ ) . '/includes/class.tvs-pmp-contact-mapping-rest-controller.php' );
+		$rest_controller = new TVS_PMP_Contact_Mapping_REST_Controller();
+//		add_action( 'rest_api_init', array( $rest_controller, 'register_routes' ) );
 	}
 
 	/**

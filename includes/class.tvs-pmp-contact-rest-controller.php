@@ -27,6 +27,11 @@ if ( ! class_exists( 'WP_REST_Controller' ) ) {
 	die();
 }
 
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-contact.php' );
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-contact-mapping.php' );
+
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-mdl-db-helper.php' );
+
 /**
  * A custom WP_REST_Controller class that supports our REST methods for  
  * managing Parent Account Contacts, which are associated with Parent
@@ -87,10 +92,29 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 * Register our REST actions for external access.
 	 */
 	public function register_routes() {
+
 		register_rest_route( $this->namespace, '/contact', array(
+			/* POST /contact ("ensure contact") */
+			array(
+				'methods'                                 => WP_REST_Server::EDITABLE,
+				'callback'                                => array( $this, 'ensure_item' ),
+				'permission_callback'                     => array( $this, 'user_has_permission' ),
+				'args'                                    => $this->ensure_args()
+			),
+
+			array(
+				'methods'                                 => WP_REST_Server::READABLE,
+				'callback'                                => array( $this, 'get_items' ),
+				'permission_callback'                     => array( $this, 'user_has_permission' ),
+				'args'                                    => $this->get_items_args()
+			)
+		) );
+		
+	/*	register_rest_route( $this->namespace, '/contact', array(
+			array(
 			/* POST /contact  ("ensure contact") */
 
-			/* We diverge from the WordPress pattern of having separate CREATABLE and UPDATABLE
+			/* We diverge from the WordPress pattern of having separate CREATABLE and EDITABLE 
 			 * endpoints. This is because any client (e.g. PowerShell script) should not need
 			 * to care whether or not a Contact with a specific set of attributes
 			 * exists already in order to ensure that it is in the correct state.
@@ -100,77 +124,89 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			 * avoids a lot of unnecessary checking for object existence and branching on the 
 			 * "frontend".
 			 */
-			array(
-				'methods'                            => WP_REST_Server::UPDATABLE,
-				'callback'                           => array( $this, 'ensure_item' ),
-				'permission_callback'                => array( $this, 'user_has_permission' ),
-				'args'                               => array( $this, 'ensure_args' )
+			/*	array(
+					'methods'                            => WP_REST_Server::EDITABLE,
+					'callback'                           => array( $this, 'ensure_item' ),
+					'permission_callback'                => array( $this, 'user_has_permission' ),
+					'args'                               => $this->ensure_args()
+				)
 			),
 
+			array
+			(
 			/* GET /contact  ("get all contacts") */
-			array(
-				'methods'                            => WP_REST_Server::READABLE,
-				'callback'                           => array( $this, 'get_items' ),
-				'permission_callback'                => array( $this, 'user_has_permission' ),
-				'args'                               => array( $this, 'get_items_args' )
+/*
+				array(
+					'methods'                            => WP_REST_Server::READABLE,
+					'callback'                           => array( $this, 'get_items' ),
+					'permission_callback'                => array( $this, 'user_has_permission' ),
+					'args'                               => $this->get_items_args()
+				) 
 			),
-		) );
+		)
+	);*/
+		
 
 		register_rest_route( $this->namespace, '/contact/(?P<id>[\d]+)', array(
-			'args' => array(
-				'id' => array(
-					'description'                => __( 'Unique identifier for the object.' ),
-					'type'                       => 'integer',
-				),
-			),
+		
+		array(
+
 			/* GET /contact/[id]      ("get contact") */
 			array(
 				'methods'                            => WP_REST_Server::READABLE,
 				'callback'                           => array( $this, 'get_item' ),
-				'permission_callback'                => array( $this, 'user_has_permission' )
+				'permission_callback'                => array( $this, 'user_has_permission' ),
+				'args' => array(
+					'id' => array(
+						'description'                => __( 'Unique identifier for the object.' ),
+						'type'                       => 'integer',
+					),
+				) 
 			),
-			/* POST /contact/[id]     ("update specific contact") */
-			array(
+
+		),
+		/* POST /contact/[id]     ("update specific contact") */
+		array(
+		       	array(
 				'methods'                            => WP_REST_Server::EDITABLE,
 				'callback'                           => array( $this, 'ensure_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
 				'args'                               => array( $this, 'ensure_args' )
-			),
+			)
+		),
 			/* DELETE /contact/[id]   ("delete contact") */
-			array(
+		array (
+	       		array(
 				'methods'                            => WP_REST_Server::DELETABLE,
 				'callback'                           => array( $this, 'delete_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' )
 			)
+		)
 		) );
 
 		register_rest_route( $this->namespace, '/contact/(?P<id>[\d]+)/mappings', array(
-			'args' => array(
-				'id' => array(
-					'description'                => __( 'Unique identifier for the object.' ),
-					'type'                       => 'integer',
-				),
-			),
+
 			/* GET /contact/[id]/mappings/ ("get all Contact's mappings") */
 			array(
 				'methods'                            => WP_REST_Server::READABLE,
 				'callback'                           => array( $this, 'get_item_mappings' ),
-				'permission_callback'                => array( $this, 'user_has_permission' )
+				'permission_callback'                => array( $this, 'user_has_permission' ),
+				'args' => array(
+					'id' => array(
+						'description'                => __( 'Unique identifier for the object.' ),
+						'type'                       => 'integer',
+					),
+				),
 			)
 		) );
 
 		register_rest_route( $this->namespace, '/contact/external-mis-id/(?P<external_mis_id>[\w-]+)', array(
-			'args' => array(
-				'external_mis_id' => array(
-					'description'                => __( 'The MIS\'s "external ID" that is unique and can be used to match a specific entity.', 'tvs-moodle-parent-provisioning' ),
-					'type'                       => 'string',
-				),
-			),
 			/* GET /contact/[id]      ("get contact") */
 			array(
 				'methods'                            => WP_REST_Server::READABLE,
 				'callback'                           => array( $this, 'get_item' ),
-				'permission_callback'                => array( $this, 'user_has_permission' )
+				'permission_callback'                => array( $this, 'user_has_permission' ),
+
 			),
 			/* POST /contact/[id]     ("update specific contact") */
 			array(
@@ -233,10 +269,10 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			),
 			'email' => array(
 				'validate_callback'        => function( $param, $request, $key ) {
-					return ( filter_var( $param, FILTER_EMAIL ) ) !== NULL;
+					return ( filter_var( $param, FILTER_VALIDATE_EMAIL ) ) !== NULL;
 				},
 				'sanitize_callback'        => function( $param, $request, $key ) {
-					return filter_var( $param, FILTER_EMAIL );
+					return filter_var( $param, FILTER_VALIDATE_EMAIL );
 				}
 			),
 			'status' => array (

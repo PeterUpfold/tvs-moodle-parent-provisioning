@@ -27,6 +27,11 @@ if ( ! class_exists( 'WP_REST_Controller' ) ) {
 	die();
 }
 
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-contact.php' );
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-contact-mapping.php' );
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-mdl-db-helper.php' );
+
+
 /**
  * A custom WP_REST_Controller class that supports our REST methods
  * for managing Contact Mappings, which connect a Moodle parent account
@@ -67,7 +72,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 * Create a new object of this type.
 	 */
 	public function __construct() {
-		$this->namespace = TVS_PMP_Actions_REST_Controller::API_NAMESPACE;
+		$this->namespace = TVS_PMP_Contact_Mapping_REST_Controller::API_NAMESPACE;
 	}
 
 	/**
@@ -90,7 +95,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			/* POST /contact-mapping ("ensure contact mapping") */
 
 			array(
-				'methods'                            => WP_REST_Server::UPDATABLE,
+				'methods'                            => WP_REST_Server::EDITABLE,
 				'callback'                           => array( $this, 'ensure_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
 				'args'                               => array( $this, 'ensure_args' )
