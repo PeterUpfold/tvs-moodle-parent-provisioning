@@ -87,7 +87,8 @@ class TVS_Parent_Moodle_Provisioning {
 			date_approved datetime,
 			date_synced datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
 			KEY mis_id (mis_id),
-			KEY external_mis_id (external_mis_id)
+			KEY external_mis_id (external_mis_id),
+			KEY mdl_user_id (mdl_user_id)
 		) $charset_collate;";
 
 		require_once ( ABSPATH . 'wp-admin/includes/upgrade.php' );
@@ -108,7 +109,8 @@ class TVS_Parent_Moodle_Provisioning {
 			KEY mis_id (mis_id),
 			KEY contact_id (contact_id),
 			KEY external_mis_id (external_mis_id),
-			KEY adno (adno)
+			KEY adno (adno),
+			KEY mdl_user_id (mdl_user_id)
 		) $charset_collate;";
 		dbDelta( $sql );
 
@@ -123,7 +125,8 @@ class TVS_Parent_Moodle_Provisioning {
 			parent_sname varchar(255) NOT NULL,
 			parent_email varchar(255) NOT NULL,
 			description varchar(255) NOT NULL,
-			request_id bigint(20) NOT NULL
+			request_id bigint(20) NOT NULL COMMENT 'The Contact ID associated with this auth table entry',
+			KEY request_id (request_id)
 		) $charset_collate;";
 
 		dbDelta( $sql );
