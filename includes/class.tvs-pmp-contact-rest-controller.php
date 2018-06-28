@@ -110,9 +110,9 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			/* GET /contact  ("get all contacts") */
 			array(
 				'methods'                            => WP_REST_Server::READABLE,
-				'callback'                           => array( $this, 'get_all_items' ),
+				'callback'                           => array( $this, 'get_items' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
-				'args'                               => array()
+				'args'                               => array( $this, 'get_items_args' )
 			),
 		) );
 
@@ -132,7 +132,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			/* POST /contact/[id]     ("update specific contact") */
 			array(
 				'methods'                            => WP_REST_Server::EDITABLE,
-				'callback'                           => array( $this, 'update_item' ),
+				'callback'                           => array( $this, 'ensure_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
 				'args'                               => array( $this, 'ensure_args' )
 			),
@@ -276,20 +276,14 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 
 	/**
-	 * Handle a request to ensure that the specified Contact exists. This will either create
-	 * a new Contact with the passed parameters, or update an existing one that matches the
-	 * unique ID(s) provided in the parameters.
+	 * Attempt to look up a Contact record from one of the unique identifiers submitted
+	 * in the $request.
 	 *
-	 * @param WP_REST_Request $request The full details about the REST request.
+	 * @param WP_REST_Request $request Full details about the request.
 	 *
-	 * @return WP_REST_Response|WP_Error
+	 * @return TVS_PMP_Contact
 	 */
-	public function ensure_item( WP_REST_Request $request ) {
-		//TODO verify that permissions checks do not need to be added here
-		//
-
-		$this->ensure_logger_and_dbc();
-
+	protected function try_get_record_from_request( WP_REST_Request $request ) {
 		// determine if we have a unique ID in the request to look up an record record
 		$id = $request->get_param( 'id' );
 		$external_mis_id =  $request->get_param( 'external_mis_id' );
@@ -311,8 +305,29 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		}
 		else {
 			// must be a new item
-			$record = NULL;
+			$record = new TVS_PMP_Contact( $this->logger, $this->dbc ); 
 		}
+		return $record;
+	}
+
+
+	/**
+	 * Handle a request to ensure that the specified Contact exists. This will either create
+	 * a new Contact with the passed parameters, or update an existing one that matches the
+	 * unique ID(s) provided in the parameters.
+	 *
+	 * @param WP_REST_Request $request The full details about the REST request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function ensure_item( WP_REST_Request $request ) {
+		//TODO verify that permissions checks do not need to be added here
+		//
+
+		$this->ensure_logger_and_dbc();
+
+		$record = $this->try_get_record_from_request( $request );
+
 
 		if ( $request->get_param( 'mis_id' ) ) {
 			$record->mis_id = $request->get_param( 'mis_id' );
@@ -356,6 +371,8 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		$result = $record->save();
 
+		$record->ensure_role_in_static_contexts();
+
 		$this->logger->debug( sprintf( __( 'Result of saving record for %d was %d affected rows.', 'tvs-moodle-parent-provisioning' ), $record->id, $result ) );
 
 		return new WP_REST_Response(
@@ -365,6 +382,65 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			)
 		);
 
+	}
+
+
+	/**
+	 * Retrieve an individual Contact from the database.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_item( WP_REST_Request $request ) {
+		//TODO verify that permissions checks do not need to be added here
+		//
+
+		$this->ensure_logger_and_dbc();
+
+		$record = $this->try_get_record_from_request( $request );
+
+		if ( ! $record->id ) {
+			return new WP_Error( 'rest_post_invalid_id', __( 'Unable to look up the Contact.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
+		}
+
+		return rest_ensure_response( $record );
+
+	}
+
+	/**
+	 * Retrieve all Contacts with the status specified in the $request.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_items( WP_REST_Request $request ) {
+		//TODO verify that permissions checks do not need to be added here
+		//
+
+		$this->ensure_logger_and_dbc();
+
+		$records = TVS_PMP_Contact::load_all( $request->get_param( 'status' ) );	
+
+		return rest_ensure_response( $records );
+
+	}
+
+	/**
+	 * The expected arguments for retrieving all Contacts.
+	 *
+	 * @return array
+	 */
+	public function get_items_args() {
+		return array(
+			'status' => array (
+				'validate_callback'        => function( $param, $request, $key ) {
+					return in_array( $param, TVS_PMP_Contact::$statuses );
+				},
+				'required'                 => true
+			)
+		);
 	}
 
 
