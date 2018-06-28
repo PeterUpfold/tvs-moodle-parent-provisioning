@@ -67,7 +67,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 * Create a new object of this type.
 	 */
 	public function __construct() {
-		$this->namespace = TVS_PMP_Actions_REST_Controller::API_NAMESPACE;
+		$this->namespace = TVS_PMP_Contact_REST_Controller::API_NAMESPACE;
 	}
 
 

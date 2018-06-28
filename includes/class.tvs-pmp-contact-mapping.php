@@ -141,6 +141,11 @@ class TVS_PMP_Contact_Mapping {
 
 		$this->dbc = $dbc;
 		$this->contact = $contact;
+		$this->contact_id = $contact->id;
+
+		$set_prefix = 'tvs-moodle-parent-provisioning-';
+		TVS_PMP_Contact_Mapping::$target_role_id = get_option(  $set_prefix . 'moodle-parent-role' );
+		TVS_PMP_Contact_Mapping::$modifier_id = get_option( $set_prefix . 'moodle-modifier-id' );
 	}
 
 	/**
@@ -148,25 +153,50 @@ class TVS_PMP_Contact_Mapping {
 	 *
 	 * @return bool Whether or not the data was loaded.
 	 */
-	public function load() {
+	public function load( $property ) {
 		global $wpdb;
-
-		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
-			$error = __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
-			$this->logger->error( $error );
-			throw new InvalidArgumentException( $error );
-		}
-		
 		$table_name = TVS_PMP_Contact_Mapping::$table_name;
-		
-		$this->logger->debug( sprintf( __( 'Load Contact Mapping with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->id, $table_name ) );
+
+		switch ( $property ) {
+		case 'id':
+			if ( empty( $this->id ) || ! is_int( $this->id ) ) {
+				$error = __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
+				$this->logger->error( $error );
+				throw new InvalidArgumentException( $error );
+			}
+			
+			
+			$this->logger->debug( sprintf( __( 'Load Contact Mapping with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->id, $table_name ) );
 
 
-		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE id = %d",
-					$this->id
-			)
-		);
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE id = %d",
+						$this->id
+				)
+			);
+			break;
+		case 'contact_id_and_adno':
+			if ( empty( $this->contact_id ) || ! is_int( $this->contact_id ) ) {
+				$error = __( 'The $contact_id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
+				$this->logger->error( $error );
+				throw new InvalidArgumentException( $error );
+			}
+			if ( empty( $this->adno ) ) {
+				$error = __( 'The $adno variable must be set to a non-empty value.', 'tvs-moodle-parent-provisioning' );
+				$this->logger->error( $error );
+				throw new InvalidArgumentException( $error );
+			}
+
+			$this->logger->debug( sprintf( __( 'Load Contact Mapping from internal Contact ID %d and Admissions Number (Moodle idnumber) \'%s\'', 'tvs-moodle-parent-provisioning' ), $this->contact_id, $this->adno ) );
+
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE contact_id = %d AND adno = %s",
+					$this->contact_id,
+					$this->adno
+				)
+			);
+			break;
+		}
 
 		// load 
 		if ( $row ) {
@@ -190,6 +220,16 @@ class TVS_PMP_Contact_Mapping {
 		global $wpdb;
 
 		$table_name = TVS_PMP_Contact_Mapping::$table_name;
+
+		if ( ! $this->mdl_user || ! $this->mdl_user_id ) {
+			$this->mdl_user = new TVS_PMP_mdl_user( $this->logger, $this->dbc );
+			$this->mdl_user->idnumber = $this->adno;
+			if ( ! $this->mdl_user->load( 'idnumber' ) ) {
+				throw new InvalidArgumentException( sprintf( __( 'Unable to match target Moodle user from Admissions Number \'%s\'', 'tvs-moodle-parent-provisioning' ), $this->adno ) );
+			}
+			$this->mdl_user_id = $this->mdl_user->id;
+			$this->username = $this->mdl_user->username;
+		}
 
 		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
 			// create
@@ -299,9 +339,10 @@ class TVS_PMP_Contact_Mapping {
 		$this->adno            = $row->adno;
 		$this->username        = $row->username;
 		$this->date_synced     = $row->date_synced;
-		$this->mdl_user        = new TVS_PMP_mdl_user( $this->username, $this->logger, $this->dbc );
-		if ( ! $this->mdl_user->load() ) {
-			throw new Exception( sprintf( __( 'Failed to load Moodle user for %s. Does this user still exist?', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+		$this->mdl_user        = new TVS_PMP_mdl_user( $this->logger, $this->dbc );
+		$this->mdl_user->idnumber = $this->adno;
+		if ( ! $this->mdl_user->load( 'idnumber' ) ) {
+			throw new Exception( sprintf( __( 'Failed to load Moodle user for \'%s\'. Does this user still exist?', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 		}
 		$this->mdl_user_id     = $this->mdl_user->id;
 		$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
@@ -352,11 +393,16 @@ class TVS_PMP_Contact_Mapping {
 			$this->logger->warn( $message );
 			throw new InvalidArgumentException( $message );
 		}
+		if ( ! $this->mdl_user->id ) {
+			$message = sprintf_( __( 'Unable to map %s, as the target Moodle user has an invalid mdl_user ID. Has it been successfully loaded?', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->mdl_user->__toString() );
+			$this->logger->warn( $message );
+			throw new InvalidArgumentException( $message );
+		}
 
 		// does a context exist that we can use?
-		$context = $this->mdl_db_helper->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->id, /* depth */ 2 );
+		$context = $this->mdl_db_helper->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
 		if ( ! $context ) {
-			$context = $this->mdl_db_helper->add_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->id, /* depth */ 2 );
+			$context = $this->mdl_db_helper->add_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
 		}
 
 		// does the role assignment already exist for this context?

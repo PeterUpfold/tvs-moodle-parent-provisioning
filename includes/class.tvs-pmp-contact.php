@@ -258,7 +258,11 @@ class TVS_PMP_Contact {
 		$this->date_approved = $row->date_approved;
 		$this->date_synced = $row->date_synced;
 
-		$this->mdl_user = new TVS_PMP_mdl_user( $this->email, $this->logger, $this->dbc );
+		$this->mdl_user = new TVS_PMP_mdl_user( $this->logger, $this->dbc );
+		$this->mdl_user->username = $this->email;
+		if ( ! $this->mdl_user->load( 'username' ) ) {
+			throw new InvalidArgumentException( sprintf( __( 'Unable to load Moodle user with username \'%s\'', 'tvs-moodle-parent-provisioning' ), $this->email ) );
+		}
 		$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 
 	}
