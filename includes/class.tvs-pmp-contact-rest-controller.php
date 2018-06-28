@@ -144,6 +144,21 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			)
 		) );
 
+		register_rest_route( $this->namespace, '/contact/(?P<id>[\d]+)/mappings', array(
+			'args' => array(
+				'id' => array(
+					'description'                => __( 'Unique identifier for the object.' ),
+					'type'                       => 'integer',
+				),
+			),
+			/* GET /contact/[id]/mappings/ ("get all Contact's mappings") */
+			array(
+				'methods'                            => WP_REST_Server::READABLE,
+				'callback'                           => array( $this, 'get_item_mappings' ),
+				'permission_callback'                => array( $this, 'user_has_permission' )
+			)
+		) );
+
 		register_rest_route( $this->namespace, '/contact/external-mis-id/(?P<external_mis_id>[\w-]+)', array(
 			'args' => array(
 				'external_mis_id' => array(
@@ -409,6 +424,29 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	}
 
 	/**
+	 * Retrieve all the Contact Mappings that this Contact has.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_item_mappings( WP_REST_Request $request ) {
+		//TODO verify that permissions checks do not need to be added here
+
+		$this->ensure_logger_and_dbc();
+
+		$record = $this->try_get_record_from_request( $request );
+
+		if ( ! $record->id ) {
+			return new WP_Error( 'rest_post_invalid_id', __( 'Unable to look up the Contact.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
+		}
+
+		$mappings = $record->get_contact_mappings();
+
+		return rest_ensure_response( $mappings );
+	}
+
+	/**
 	 * Retrieve all Contacts with the status specified in the $request.
 	 *
 	 * @param WP_REST_Request $request Full details about the request.
@@ -441,6 +479,41 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 				'required'                 => true
 			)
 		);
+	}
+
+	/**
+	 * Completely delete the Contact from our internal databases, ensuring that it does not
+	 * exist within Moodle as well.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_item( WP_REST_Request $request ) {
+		//TODO verify that permissions checks do not need to be added here
+		//
+		
+		$this->ensure_logger_and_dbc();
+
+		$record = $this->try_get_record_from_request( $request );
+
+		if ( ! $record || ! $record->id ) {
+			return new WP_Error( 'rest_post_invalid_id', __( 'Unable to look up the Contact.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
+		}
+
+		if ( $record->does_mdl_user_exist() ) {
+			$mappings = $record->get_contact_mappings( true );
+			if ( is_array( $mappings ) && count( $mappings ) > 0 ) {
+				// loop through mappings and unmap
+				foreach( $mappings as $mapping ) {
+					$this->logger->debug( sprintf( __( 'Will unmap and delete \'%s\'', 'tvs-moodle-parent-provisioning' ), $mapping ) );
+					$mapping->unmap();
+					$mapping->delete();
+				}
+			}
+			$record->deprovision( 'deleting' );
+			$record->delete();
+		}
 	}
 
 

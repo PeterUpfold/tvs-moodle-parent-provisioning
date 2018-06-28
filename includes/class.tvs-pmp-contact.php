@@ -222,6 +222,21 @@ class TVS_PMP_Contact {
 				)
 			);
 			break;
+		case 'mdl_user_id':
+			if ( empty( $this->mdl_user_id ) || ! is_int( $this->mdl_user_id ) ) {
+				$error = __( 'The $mdl_user_id variable must be set.', 'tvs-moodle-parent-provisioning' );
+				$this->logger->error( $error );
+				throw new InvalidArgumentException( $error );
+			}
+
+			$this->logger->debug( sprintf( __( 'Load Contact with Moodle user ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->mdl_user_id, $table_name ) );
+		
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE mdl_user_id = %d",
+						$this->mdl_user_id
+				)
+			);
+			break;
 		}
 		
 	

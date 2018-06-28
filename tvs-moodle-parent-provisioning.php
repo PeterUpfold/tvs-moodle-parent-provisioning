@@ -133,7 +133,8 @@ class TVS_Parent_Moodle_Provisioning {
 		$role->add_cap( TVS_PMP_REQUIRED_CAPABILITY );
 
 		add_option( 'tvs_parent_moodle_provisioning_dbversion', TVS_PMP_DBVERSION );
-	
+
+
 	}
 
 	/**

@@ -104,9 +104,10 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			)
 		) );
 
-		register_rest_route( $this->namespace, '/contact-mapping/target/(?P<id>[\d]+)', array(
+			/* GET /contact-mapping/target/[moodleuserid] */
+		register_rest_route( $this->namespace, '/contact-mapping/target/(?P<mdl_user_id>[\d]+)', array(
 			'args' => array(
-				'id' => array(
+				'mdl_user_id' => array(
 					'description'                => __( 'Moodle user ID of the target of this Contact Mapping (i.e. the user context in which the Parent role is assigned -- the pupil user ID.)', 'tvs-moodle-parent-provisioning' ),
 					'type'                       => 'integer',
 				)
@@ -126,6 +127,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 				'methods'                            => WP_REST_Server::DELETABLE,
 				'callback'                           => array( $this, 'delete_item' ),
 				'permission_callback'                => array( $this, 'user_has_permision' ),
+				'args'                               => array( $this, 'get_delete_args' ),
 			)
 		) );
 
@@ -139,6 +141,32 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 */
 	public function user_has_permission() {
 		return current_user_can( TVS_PMP_REQUIRED_CAPABILITY );
+	}
+	
+
+	/*
+	 * The expected arguments for the get_item and delete_item methods.
+	 *
+	 * @return array
+	 */
+	public function get_delete_args() {
+		return array(
+			'id'      => array(
+				'validate_callback'          => function( $param, $request, $key ) {
+					return ! empty( $param ) && is_numeric( $param );
+				}
+			),
+			'contact_id' => array(
+				'validate_callback'          => function( $param, $request, $key ) {
+					return ! empty( $param ) && is_numeric( $param );
+				},
+			),
+			'adno'       => array(
+				'validate_callback'          => function( $param, $request, $key ) {
+					return ! empty( $param );
+				}
+			)
+		);
 	}
 
 	/*
@@ -238,6 +266,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			}
 			else {
 				$this->logger->debug( sprintf( __( '\'%s\' is mapped correctly.', 'tvs-moodle-parent-provisioning' ), $mapping ) );
+				$mapping->date_synced = date( 'Y-m-d H:i:s' );
+				$mapping->save();
 			}
 			return new WP_REST_Response( array(
 				'success'            => true,
@@ -270,8 +300,115 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 		return new WP_REST_Response( array(
 				'success'            => true,
 				'record'             => $mapping
-			) );
+		) );
+	}
+
+	/**
+	 * Unmap and delete this Contact Mapping.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_item( WP_REST_Request $request ) {
+		$this->ensure_logger_and_dbc();
+
+		$record = $this->try_get_record_from_request( $request );
+
+		if ( ! $record || ! $record->id ) {
+			return new WP_Error( 'rest_post_invalid_id', __( 'Unable to look up the Contact Mapping.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
 		}
+
+		if ( $record->is_mapped() ) {
+			if ( ! $record->unmap() ) {
+				return new WP_Error( 'failed_unmap', sprintf( __( 'Failed to unmap \'%s\'', 'tvs-moodle-parent-provisioning' ), $record ), array( 'status' => 500 ) );
+			}
+		}
+
+		if ( ! $record->delete() ) {
+				return new WP_Error( 'failed_delete', sprintf( __( 'Failed to delete \'%s\' from internal database', 'tvs-moodle-parent-provisioning' ), $record ), array( 'status' => 500 ) );
+		}
+
+		return rest_ensure_response( array( 'success' => true ) );
+
+	}
+
+	/**
+	 * Get the specified Contact Mapping based on the identifier(s) supplied in
+	 * $request.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_item( WP_REST_Request $requset ) {
+		$this->ensure_logger_and_dbc();
+
+		$record = $this->try_get_record_from_request( $request );
+		if ( ! $record || ! $record->id ) {
+			return new WP_Error( 'rest_post_invalid_id', __( 'Unable to look up the Contact Mapping.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
+		}
+
+		return new WP_REST_Response( array(
+			'success' => true,
+			'record'  => $record
+		) );
+	}
+
+	/**
+	 * Attempt to look up a Contact Mapping from one of the unique identifiers or sets
+	 * of unique identifiers (Contact ID->target Moodle user ID for example) that were
+	 * submitted in the $request.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return TVS_PMP_Contact_Mapping
+	 */
+	protected function try_get_record_from_request( WP_REST_Request $request ) {
+
+		$this->ensure_logger_and_dbc();
+
+		// determine if we have a unique ID to look up
+		$id = $request->get_param( 'id' );
+
+		$contact_id = $request->get_param( 'contact_id' );
+		$adno = $request->get_param( 'adno' );
+
+		$mdl_user_id = $request->get_param( 'mdl_user_id' );
+		if ( ! $contact_id  && $mdl_user_id ) {
+			// look up Contact ID from Moodle user
+			$contact = new TVS_PMP_Contact( $this->logger, $this->dbc );
+			$contact->mdl_user_id = $mdl_user_id;
+			if ( $contact->load( 'mdl_user_id' ) ) {
+				$this->logger->debug( sprintf( __( 'Found Contact \'%s\' to match Moodle user ID %d', 'tvs-moodle-parent-provisioning' ), $contact, $contact->mdl_user_id ) );
+				$contact_id = $contact->id;
+			}
+		}
+
+		$record = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc ); // we will 'load' to see if it exists
+
+		if ( NULL != $id ) {
+			$record->id = $id;
+			if ( ! $record->load( 'id' ) ) {
+				$this->logger->warn( sprintf( __( 'Unable to load Contact Mapping with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
+				$record = NULL;
+			}
+		}
+		else if ( NULL != $contact_id && NULL != $adno ) {
+			// look up by internal Contact ID and Adno combination
+			$record->contact_id = $contact_id;
+			$record->adno = $adno;
+			if ( ! $record->load( 'contact_id_and_adno' ) ) {
+				$this->logger->warn( sprintf( __( 'Unable to load Contact Mapping with contact ID %d and Adno \'%s\'', 'tvs-moodle-parent-provisioning' ), $contact_id, $adno ) );
+				$record = NULL;
+			}
+		}
+		else {
+			// cannot create a new Contact Mapping here without access to full contact object
+			$this->logger->debug( __( 'Unable to match Contact Mapping. Neither the ID was specified nor a Contact ID and Adno.', 'tvs-moodle-parent-provisioning' ) );
+			return NULL;
+		}
+
+		return $record;
 	}
 
 };

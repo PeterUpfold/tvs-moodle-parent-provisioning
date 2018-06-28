@@ -85,7 +85,7 @@ class TVS_PMP_MDL_DB_Helper {
 
 		$log_level = ( 'info' == get_option( 'tvs-moodle-parent-provisioning-log-level' ) ) ? Logger::INFO : Logger::DEBUG;
 		
-		$logger->pushHandler( new StreamHandler( $log_file_path, $log_level ) ); 
+		$logger->pushHandler( new StreamHandler( get_option( 'tvs-moodle-parent-provisioning-log-file-path' ) , $log_level ) ); 
 		$local_log_stream = fopen( 'php://memory', 'w+' );
 		$logger->pushHandler( new StreamHandler( $local_log_stream ), $log_level );
 
