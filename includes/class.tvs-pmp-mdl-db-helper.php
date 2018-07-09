@@ -65,6 +65,12 @@ class TVS_PMP_MDL_DB_Helper {
 	 */
 	public $logger = NULL;
 
+	/**
+	 * A local log stream for the Monolog\Logger\Logger that we can use to get a "stack trace"
+	 * style log of the events leading up to a provisioning failure to send in an email.
+	 */
+	public $local_log_stream = NULL;
+
 
 	/**
 	 * Create the object.
@@ -215,6 +221,174 @@ class TVS_PMP_MDL_DB_Helper {
 
 	}
 
+
+	/**
+	 * Find all approved requests and provision them.
+	 *
+	 * @return void
+	 */
+	public function provision_all_approved() {
+		
+		$this->logger->info( __( 'Begin provisioning cycle for all approved contacts.', 'tvs-moodle-parent-provisioning' ) );
+
+		$contacts = TVS_PMP_Contact::load_all_approved();
+
+		if ( count( $contacts ) < 1 ) {
+			$this->logger->info( __( 'No contacts currently in the approved state. Ending this provisioning cycle.', 'tvs-moodle-parent-provisioning' ) );
+			return;
+		}
+
+		$this->logger->info( sprintf( __( 'Found %d contacts to provision', 'tvs-moodle-parent-provisioning' ), count( $contacts ) ) );
+
+		$failed = 0;
+		$succeeded = 0;
+
+		$success_parents = '';
+
+		$task = '\auth_db\task\sync_users';
+
+		$this->logger->info( sprintf( __( 'Running task %s to sync new accounts in auth table with Moodle', 'tvs-moodle-parent-provisioning' ), $task ) );
+		$this->run_moodle_scheduled_task( $task, $exit_code );
+		//$this->logger->info( sprintf( __( 'Task %s completed with exit code %d', 'tvs-moodle-parent-provisioning' ), $task, $exit_code ) );
+
+		if ( $exit_code != 0 ){
+			$this->logger->warning( sprintf( __( 'The Moodle scheduled task %s ended with exit code %d. This implies that the task did not complete successfully. Set the logging level to debugging on the \'Settings\' screen, re-run this process and review the log entries for the task.', 'tvs-moodle-parent-provisioning' ), $task, $exit_code ) );
+		}
+
+		foreach( $contacts as $contact_index => $contact ) {
+
+
+
+			// look up new mdl_user ID
+			try {
+				$contact->load_mdl_user();
+				++$succeeded;
+				$success_parents .= sprintf( "%s", $contact ) . PHP_EOL;
+			}
+			catch ( Exception $e ) {
+				++$failed;
+
+				$this->send_provisioning_email(
+					sprintf( __( 'TVS Moodle Parent Provisioning: Provisioning failed for parent %s %s', 'tvs-moodle-parent-provisioning' ), $request->parent_fname, $request->parent_sname ),
+					sprintf(
+						__( "The parent account for %s could not be provisioned successfully.\n\nFor more information, review the log file for this provisioning cycle below.\n\n%s", 'tvs-moodle-parent-provisioning' ),
+							$contact,
+							$this->get_log_content()
+					)
+				);
+
+			}	
+
+			// a partial success will trigger the log dump below because succeeded will not match request count
+	
+		}
+
+		// summarise and send emails
+		if ( $succeeded == count( $contacts ) ) {
+
+			// send out temporary passwords
+			$task = '\core\task\send_new_user_passwords_task';
+
+			$this->logger->info( sprintf( __( 'Running task %s to send out initial passwords for the new accounts', 'tvs-moodle-parent-provisioning' ), $task ) );
+			$this->run_moodle_scheduled_task( $task, $exit_code );
+			if ( $exit_code != 0 ){
+				$this->logger->warning( sprintf( __( 'The Moodle scheduled task %s ended with exit code %d. This implies that the task did not complete successfully. Set the logging level to debugging on the \'Settings\' screen, re-run this process and review the log entries for the task.', 'tvs-moodle-parent-provisioning' ), $task, $exit_code ) );
+			}
+
+			$this->send_provisioning_email(
+				sprintf( __( 'TVS Moodle Parent Provisioning: Provisioning cycle completed for %d parents', 'tvs-moodle-parent-provisioning' ), count( $contacts ) ),
+				sprintf(
+					__( "Successfully completed a provisioning cycle for %d parents.\n\n%s\n\nFor more information, review the log file for this provisioning cycle below.\n\n%s", 'tvs-moodle-parent-provisioning' ),
+						count( $contacts ),
+						$success_parents,
+						$this->get_log_content()
+				)
+			);		
+		}
+		else if ( $succeeded == 0 ) {
+
+			// no success
+			$this->send_provisioning_email(
+				sprintf( __( 'TVS Moodle Parent Provisioning: Provisioning cycle failed', 'tvs-moodle-parent-provisioning' ), count( $contacts ) ),
+				sprintf(
+					__( "The provisioning cycle failed to complete.\n\nHolding off on sending initial password emails (however this runs periodically, so password emails may be sent at any time).\n\nFor more information, review the log file for this provisioning cycle below.\n\n%s", 'tvs-moodle-parent-provisioning' ),
+						$this->get_log_content()
+				)
+			);	
+		}
+		else {
+
+			// some were unsuccessful
+			$this->send_provisioning_email(
+				sprintf( __( 'TVS Moodle Parent Provisioning: Provisioning cycle partially complete', 'tvs-moodle-parent-provisioning' ), count( $contacts ) ),
+				sprintf(
+					__( "The provisioning cycle successfully provisioned the accounts below.\n\n%s\n\nHowever, not all accounts were provisioned successfully.\n\nHolding off on sending initial password emails (however this runs periodically, so password emails may be sent at any time).\n\nFor more information, review the log file for this provisioning cycle below.\n\n%s", 'tvs-moodle-parent-provisioning' ),
+						$success_parents,
+						$this->get_log_content()
+				)
+			);		
+		}
+
+	}
+
+	/**
+	 * Get the current log entries that we have written so far.
+	 *
+	 * @return string
+	 */
+	protected function get_log_content() {
+
+		// get the handlers to find the local log stream to dump
+		if ( NULL === $this->local_log_stream ) {
+			foreach( $this->logger->getHandlers() as $handler ) {
+				if ( $handler instanceof \Monolog\Handler\StreamHandler && NULL === $handler->url && is_resource( $handler->getStream() ) ) {
+					$this->local_log_stream = $handler->getStream();
+					break;
+				}
+			}
+		}	
+
+		rewind( $this->local_log_stream );
+		$result = stream_get_contents( $this->local_log_stream );
+
+		fseek( $this->local_log_stream, -1, SEEK_END );
+	
+		return $result;
+	}
+
+	/**
+	 * Send an email to the provisioning email recipients with the specified subject and body.
+	 *
+	 * This is used to send success and failure messages to admins.
+	 *
+	 * @param string subject The email subject.
+	 * @param string body The email body.
+	 *
+	 * @return void
+	 */
+	public function send_provisioning_email( $subject, $body ) {
+		$this->logger->debug( sprintf( __( 'Will send an email with subject %s', 'tvs-moodle-parent-provisioning' ), $subject ) );
+
+		$users = get_option( 'tvs-moodle-parent-provisioning-provisioning-email-recipients' );
+
+		$users_array = explode( "\n", $users );
+
+		if ( is_array( $users_array ) && count( $users_array ) > 0 ) {
+			foreach( $users_array as $user ) {
+				//$this->logger->debug( sprintf( __( 'Send to recipient %s', 'tvs-moodle-parent-provisioning' ), $user ) );
+				wp_mail(
+					$user,
+					$subject,
+					$body,
+					array( 'From: ' . get_bloginfo( 'admin_email' ) )
+				);
+			}
+		}
+		else {
+			$this->logger->warning( sprintf( __( 'No email recipients. Email about \'%s\' will not send.', 'tvs-moodle-parent-provisioning' ), $subject ) );
+		}
+
+	}
 
 };
 

@@ -428,7 +428,31 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		$result = $record->save();
 
-		$record->ensure_role_in_static_contexts();
+		/* all Contacts are created with the status 'pending'. To now set a different status, such as 'approved', we
+		 * will update the object.
+		 */
+		if ( 'pending' == $record->status && 'pending' != $request->get_param( 'status' ) ) {
+			switch( $request->get_param( 'status' ) {
+			case 'approved':
+				$record->approve_for_provisioning();
+
+				$helper = new TVS_PMP_MDL_DB_Helper( $this->logger, $this->dbc );
+				$helper->provision_all_approved();
+				// our only option is to provision all in 'approved' state -- this is what Moodle looks at
+				
+				// now make sure we have all Moodle user properties loaded into this Contact
+							
+				
+				break;
+			}	
+		}
+
+		if ( NULL !== $record->id ) {
+			$record->ensure_role_in_static_contexts();
+		}
+		else {
+			$this->logger->warn( sprintf( __( 'Cannot ensure role in static contexts for %s as the ID was not set after saving the Contact.', 'tvs-moodle-parent-provisioning' ), $record ) );
+		}
 
 		$this->logger->debug( sprintf( __( 'Result of saving record for %d was %d affected rows.', 'tvs-moodle-parent-provisioning' ), $record->id, $result ) );
 

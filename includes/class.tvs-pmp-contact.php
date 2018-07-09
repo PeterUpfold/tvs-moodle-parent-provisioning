@@ -22,6 +22,7 @@
  */
 
 require_once( dirname( __FILE__ ) . '/../vendor/autoload.php' );
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-mdl-user.php' );
 
 use Monolog\Logger;
 use Monolog\ErrorHandler;
@@ -110,7 +111,7 @@ class TVS_PMP_Contact {
 	/**
 	 * The name of the database table containing records.
 	 */
-	public static $table_name = 'tvs_parent_moodle_provisioning';
+	public static $table_name = 'tvs_parent_moodle_provisioning_contact';
 
 	/**
 	 * The valid statuses for a record.
@@ -272,14 +273,24 @@ class TVS_PMP_Contact {
 		$this->date_updated = $row->date_updated;
 		$this->date_approved = $row->date_approved;
 		$this->date_synced = $row->date_synced;
+	
+		$this->load_mdl_user();
 
+		$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+
+	}
+
+	/**
+	 * Load information about the Moodle user with the email address $this->email.
+	 *
+	 */
+	public function load_mdl_user() {
 		$this->mdl_user = new TVS_PMP_mdl_user( $this->logger, $this->dbc );
 		$this->mdl_user->username = $this->email;
 		if ( ! $this->mdl_user->load( 'username' ) ) {
 			throw new InvalidArgumentException( sprintf( __( 'Unable to load Moodle user with username \'%s\'', 'tvs-moodle-parent-provisioning' ), $this->email ) );
 		}
-		$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
-
+		$this->logger->debug( sprintf( __( 'Loaded Moodle user %s', 'tvs-moodle-parent-provisioning' ), $this->mdl_user ) );
 	}
 
 	/**
@@ -345,12 +356,13 @@ class TVS_PMP_Contact {
 	public function save() {
 		global $wpdb;
 
+		$table_name = $wpdb->prefix . TVS_PMP_Contact::$table_name;
+
 		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
 
 			$this->logger->debug( __( 'ID was not set, so creating a new Contact.', 'tvs-moodle-parent-provisioning' ) );
-
 			$affected_rows = $wpdb->insert(
-				( $wpdb->prefix . TVS_PMP_Contact::$table_name ),
+				$table_name,
 				array(
 					'mis_id'          => intval( $this->mis_id ),
 					'external_mis_id' => stripslashes( $this->external_mis_id ),
@@ -381,6 +393,9 @@ class TVS_PMP_Contact {
 			}
 
 			$this->status = 'pending';
+
+			$this->load_mdl_user();
+
 			return $affected_rows;
 
 		}
@@ -422,6 +437,10 @@ class TVS_PMP_Contact {
 				)
 			);
 
+			if ( NULL === $this->mdl_user ) {
+				$this->load_mdl_user();
+			}
+
 			$this->logger->debug( sprintf( __( 'Updated %s. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $affected_rows ) );
 			return $affected_rows;
 
@@ -448,24 +467,7 @@ class TVS_PMP_Contact {
 		$approved_text = sprintf( __( '%s Approved for provisioning at %s -- awaiting next provision cycle', 'tvs-moodle-parent-provisioning' ), $this->__toString(), date('j F Y H:i:s T'));
 		$this->logger->info( $approved_text );
 		$new_sys_comment = $this->system_comment . PHP_EOL . $approved_text;
-
-		$wpdb->update( 	$wpdb->prefix .'tvs_parent_moodle_provisioning',
-			array(
-				'system_comment'		=> $new_sys_comment,
-				'status'			=> $new_status,
-				'date_updated'			=> date('Y-m-d H:i:s'),
-				'date_approved'			=> date('Y-m-d H:i:s')
-			), array(
-				'id'				=> $this->id
-			), array(
-				'%s',
-				'%s',
-				'%s',
-				'%s'
-			), array(
-				'%d'
-			)	
-		 );
+		$this->system_comment = $new_sys_comment;//TODO update system_comment
 
 		// check for pre-existence of a parent with this email
 		$exists = $wpdb->get_results( $wpdb->prepare(
@@ -476,26 +478,11 @@ class TVS_PMP_Contact {
 		) );
 
 		if ( count( $exists ) > 0 ) {
-				$new_status = 'duplicate';
+			$new_status = 'duplicate';
 	
 			$dupl_comment = sprintf( __( 'Unable to provision %s, as email address \'%s\' already exists in external users table -- %s', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->email, date( 'j F Y H:i:s T') );
-			$new_sys_comment .= PHP_EOL . 
-
-			$wpdb->update( 	$wpdb->prefix .'tvs_parent_moodle_provisioning',
-				array(
-					'system_comment'		=> $new_sys_comment,
-					'status'			=> 'duplicate',
-					'date_updated'			=> date('Y-m-d H:i:s')
-				), array(
-					'id'				=> $this->id
-				), array(
-					'%s',
-					'%s',
-					'%s'
-				), array(
-					'%d'
-				)	
-			 );
+			$new_sys_comment .= PHP_EOL . $dupl_comment;
+			      
 			
 			throw new TVS_PMP_Duplicate_Exception(
 				sprintf( __( 'Unable to provision %s, as email address already exists in external users table. Marked as duplicate.', 'tvs-moodle-parent-provisioning' ), $this->__toString() )

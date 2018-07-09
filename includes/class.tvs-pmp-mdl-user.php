@@ -102,10 +102,7 @@ class TVS_PMP_mdl_user {
 				
 			$stmt->bind_param( 's', $this->idnumber );
 			$stmt->execute();
-			$stmt->bind_result( $id );
-			$stmt->bind_result( $username );
-			$stmt->bind_result( $idnumber );
-			$stmt->bind_result( $suspended );
+			$stmt->bind_result( $id, $username, $idnumber, $suspended );
 			$stmt->store_result();
 
 			if ( $stmt->num_rows > 0 ) {
@@ -118,7 +115,7 @@ class TVS_PMP_mdl_user {
 				return true;
 			}
 			else {
-				$this->logger->debug( sprintf( __( 'Did not find a user to match idnumber %s.', 'tvs-moodle-parent-provisioning' ), $this->idnumber );
+				$this->logger->debug( sprintf( __( 'Did not find a user to match idnumber %s.', 'tvs-moodle-parent-provisioning' ), $this->idnumber ) );
 				return false;
 			}
 
@@ -133,10 +130,7 @@ class TVS_PMP_mdl_user {
 				
 			$stmt->bind_param( 'i', $this->id );
 			$stmt->execute();
-			$stmt->bind_result( $id );
-			$stmt->bind_result( $username );
-			$stmt->bind_result( $idnumber );
-			$stmt->bind_result( $suspended );
+			$stmt->bind_result( $id, $username, $idnumber, $suspended );
 			$stmt->store_result();
 
 			if ( $stmt->num_rows > 0 ) {
@@ -149,14 +143,14 @@ class TVS_PMP_mdl_user {
 				return true;
 			}
 			else {
-				$this->logger->debug( sprintf( __( 'Did not find a user to match internal ID %d.', 'tvs-moodle-parent-provisioning' ), $this->id );
+				$this->logger->debug( sprintf( __( 'Did not find a user to match internal ID %d.', 'tvs-moodle-parent-provisioning' ), $this->id ) );
 				return false;
 			}
 
 			break;
 
 		case 'username':
-			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username FROM mdl_user WHERE username = ?' ) ) {
+			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username, idnumber, suspended FROM mdl_user WHERE username = ?' ) ) {
 
 				throw new Exception( __( 'Unable to prepare query to load a Moodle user', 'tvs-moodle-parent-provisioning' ) );
 			}	
@@ -164,10 +158,7 @@ class TVS_PMP_mdl_user {
 				
 			$stmt->bind_param( 's', $this->username );
 			$stmt->execute();
-			$stmt->bind_result( $id );
-			$stmt->bind_result( $username );
-			$stmt->bind_result( $idnumber );
-			$stmt->bind_result( $suspended );
+			$stmt->bind_result( $id, $username, $idnumber, $suspended );
 			$stmt->store_result();
 
 			if ( $stmt->num_rows > 0 ) {
@@ -180,7 +171,7 @@ class TVS_PMP_mdl_user {
 				return true;
 			}
 			else {
-				$this->logger->debug( sprintf( __( 'Did not find a user to match username %s.', 'tvs-moodle-parent-provisioning' ), $this->username );
+				$this->logger->debug( sprintf( __( 'Did not find a user to match username %s.', 'tvs-moodle-parent-provisioning' ), $this->username ) );
 				return false;
 			}
 
@@ -241,7 +232,7 @@ class TVS_PMP_mdl_user {
 
 		$this->logger->debug( sprintf( __( 'Preparing to set mnethostid for userid %d: mnethostid %d, auth %s', 'tvs-moodle-parent-provisioning' ), $this->id, $mnethostid, $auth ) );
 
-		$stmt = $this->dbc->prepare( "UPDATE {$this->dbprefix}user SET mnethostid = ? WHERE auth = ? AND id = ?"this->mdl_user
+		$stmt = $this->dbc->prepare( "UPDATE {$this->dbprefix}user SET mnethostid = ? WHERE auth = ? AND id = ?" );
 		if ( ! $stmt ) {
 			throw new Exception( sprintf( __( 'Failed to prepare the database statement to set mnethostid. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
 		}
@@ -269,13 +260,13 @@ class TVS_PMP_mdl_user {
 	 */
 	public function get_role_assignment( $roleid, $contextid ) {
 
-		if ( $this->id === NULL ) {
-			$this->load();
+		if ( NULL === $this->id ) {
+			throw new LogicException( __( 'Attempting to get role assignment for a mdl_user object that has not been loaded yet, or does not exist.', 'tvs-moodle-parent-provisioning' ) );
 		}
 
 		$this->logger->debug( sprintf( __( 'Determine role assignment for user %d with role %d in context %d', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
 
-		$stmt = $this->dbc->prepare( "SELECT id FROM {$this->dbprefix}role_assignments WHERE roleid = ? AND contextid = ? AND this->id = ?" );
+		$stmt = $this->dbc->prepare( "SELECT id FROM {$this->dbprefix}role_assignments WHERE roleid = ? AND contextid = ? AND id = ?" );
 
 		if ( ! $stmt ) {
 			throw new Exception( sprintf( __( 'Failed to prepare the database statement to get role assignments. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
@@ -338,6 +329,15 @@ class TVS_PMP_mdl_user {
 		$stmt->close();
 
 		return $rows;
+	}
+
+	/**
+	 * Return a string representation of the object.
+	 *
+	 * @return string
+	 */
+	public function __toString() {
+		return "[mdl_user]" . $this->username;
 	}
 
 
