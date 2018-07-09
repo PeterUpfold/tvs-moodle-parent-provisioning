@@ -71,6 +71,62 @@ class TVS_PMP_MDL_DB_Helper {
 	 */
 	public $local_log_stream = NULL;
 
+	/**
+	 * The database prefix for the tables in the Moodle database 
+	 */
+	protected $dbprefix = 'mdl_';
+
+	/** 
+	 * The Unix user account to use for invoking various Moodle scheduled tasks to trigger the creation of 
+	 * new user accounts.
+	 */
+	protected $sudo_account = '';
+
+	/**
+	 * The full file path to the PHP executable we shall use for invoking Moodle scheduled tasks via the CLI.
+	 */
+	protected $php_path = '';
+
+	/**
+	 * The type of authentication plugin that is used on Moodle. Typically this will be 'db'
+	 * for "external database".
+	 */
+	protected $auth = 'db';
+
+	/**
+	 * The Moodle mnethostid which is considered to be 'local'.
+	 *
+	 * We use this to ensure that newly created user accounts are considered 'local' by Moodle.
+	 */
+	protected $local_mnethostid = NULL;
+
+	/**
+	 * The role ID which is the desired role to set for the parent in the context of pupils.
+	 */
+	protected $parent_role_id = 8;
+
+	/**
+	 * The user ID that, for audit purposes, is considered to have modified records in the role assignments table.
+	 */
+	protected $modifier_id = 2; 
+
+	/**
+	 * The base URL of the target Moodle installation.
+	 */
+	protected $moodle_baseurl = '';
+
+	/** 
+	 * The base path of the target Moodle installation's PHP files. (not moodledata!)
+	 */
+	protected $moodle_basepath = '';
+
+	/**
+	 * Support only the whitelisted scheduled tasks for invocation via the Moodle CLI.
+	 */
+	protected $moodle_tasks_whitelist = array(
+		'\core\task\send_new_user_passwords_task',
+		'\auth_db\task\sync_users'		
+	);
 
 	/**
 	 * Create the object.
@@ -78,6 +134,31 @@ class TVS_PMP_MDL_DB_Helper {
 	public function __construct( $logger, $dbc ) {
 		$this->logger = $logger;
 		$this->dbc = $dbc;
+
+		// load settings
+		$set_prefix = 'tvs-moodle-parent-provisioning-';
+
+		$this->parent_role_id = get_option( $set_prefix . 'moodle-parent-role' );
+		$this->modifier_id = get_option( $set_prefix . 'moodle-modifier-id' );
+		$this->sudo_account = get_option( $set_prefix . 'moodle-sudo-account' );
+		$this->php_path = get_option( $set_prefix . 'php-path' );
+		$this->moodle_baseurl = get_option( $set_prefix . 'moodle-url' );
+		$this->moodle_basepath = get_option( $set_prefix . 'moodle-path' );
+
+		// validate PHP path
+		if ( ! file_exists( $this->php_path ) ) {
+			$exception_message = sprintf( __( 'The PHP path %s does not exist or could not be accessed.', 'tvs-moodle-parent-provisioning' ), $this->php_path );
+			$this->logger->error( $exception_message );
+			throw new \Exception( $exception_message );
+		}
+
+		if ( $this->dbc->connect_error !== NULL ) {
+			$this->logger->error( sprintf ( __( 'Failed to initialise the database object. Connection error %d: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->connect_errno, $this->dbc->connect_error ) );
+			if ( php_sapi_name() != 'cli' ) {
+				echo sprintf ( __( 'Failed to initialise the database object. Connection error %d: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->connect_errno, $this->dbc->connect_error );
+			}
+		}
+
 	}
 
 	/**
@@ -221,6 +302,72 @@ class TVS_PMP_MDL_DB_Helper {
 
 	}
 
+	/**
+	 * Force the specified Moodle scheduled task to run immediately.
+	 *
+	 * This is used to force the syncing of users with the external DB, and to force the sending of new 
+	 * user passwords. It will use the specified sudo user set in this instance's properties.
+	 *
+	 * @param string task Task name, such as \core\task\send_new_user_passwords_task
+	 * @param int exit_code The exit code of the command will be set in this referenced variable.
+	 * 
+	 * @return array lines of command output
+	 */
+	public function run_moodle_scheduled_task( $task, &$exit_code ) {
+		$output = array();
+
+		$this->logger->info( sprintf( __( 'Running Moodle scheduled task %s', 'tvs-moodle-parent-provisioning' ), $task ) );
+
+
+		// if any argument is suspect, refuse to run
+		if (
+			NULL == $this->sudo_account ||
+			empty( $this->sudo_account ) ||
+			NULL == $this->php_path ||
+			empty( $this->php_path ) ||
+			NULL == $this->moodle_basepath ||
+			empty( $this->moodle_basepath ) ||
+			NULL == $task ||
+			empty( $task )
+		) {
+			throw new InvalidArgumentException( __( 'One or more of the required configuration settings was not loaded correctly. For security reasons, no command will be executed.', 'tvs-moodle-parent-provisioning' ) );
+		}
+
+
+		// support only whitelisted $tasks
+		if ( ! in_array( $task, $this->moodle_tasks_whitelist ) ) {
+			throw new InvalidArgumentException( sprintf( __( 'Only the following tasks can be invoked by this method: %s', 'tvs-moodle-parent-provisioning' ), implode( ',', $this->moodle_tasks_whitelist ) ) );
+		}
+		
+		
+		$command = 'sudo -u ' .
+			escapeshellarg( $this->sudo_account ) .
+			' ' .
+			escapeshellarg( $this->php_path ) .
+			' ' .
+			escapeshellarg( trailingslashit( $this->moodle_basepath ) . 'admin/tool/task/cli/schedule_task.php' )
+			. ' --execute='.
+			escapeshellarg( $task ) .
+			' --showdebugging 2>&1';
+
+		$this->logger->info( sprintf( __( 'Will execute: %s', 'tvs-moodle-parent-provisioning' ), $command ) );
+
+		exec( $command, $output, $exit_code ); 
+
+		// dump all output to debug log
+		if ( is_array( $output ) && count( $output ) > 0 ) {
+			foreach( $output as $line_no => $line ) {
+				$this->logger->debug( $line_no . ': ' . $line );
+			}
+		}
+
+
+		$this->logger->debug( sprintf( __( 'Moodle scheduled task %s ended with exit code %d', 'tvs-moodle-parent-provisioning' ), $task, $exit_code ) );
+		
+
+		return $output;
+	}
+
 
 	/**
 	 * Find all approved requests and provision them.
@@ -231,7 +378,7 @@ class TVS_PMP_MDL_DB_Helper {
 		
 		$this->logger->info( __( 'Begin provisioning cycle for all approved contacts.', 'tvs-moodle-parent-provisioning' ) );
 
-		$contacts = TVS_PMP_Contact::load_all_approved();
+		$contacts = TVS_PMP_Contact::load_all_approved( $this->logger, $this->dbc );
 
 		if ( count( $contacts ) < 1 ) {
 			$this->logger->info( __( 'No contacts currently in the approved state. Ending this provisioning cycle.', 'tvs-moodle-parent-provisioning' ) );
@@ -341,7 +488,7 @@ class TVS_PMP_MDL_DB_Helper {
 		// get the handlers to find the local log stream to dump
 		if ( NULL === $this->local_log_stream ) {
 			foreach( $this->logger->getHandlers() as $handler ) {
-				if ( $handler instanceof \Monolog\Handler\StreamHandler && NULL === $handler->url && is_resource( $handler->getStream() ) ) {
+				if ( $handler instanceof \Monolog\Handler\StreamHandler && NULL === $handler->getUrl() && is_resource( $handler->getStream() ) ) {
 					$this->local_log_stream = $handler->getStream();
 					break;
 				}

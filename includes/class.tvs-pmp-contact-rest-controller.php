@@ -432,23 +432,43 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		 * will update the object.
 		 */
 		if ( 'pending' == $record->status && 'pending' != $request->get_param( 'status' ) ) {
-			switch( $request->get_param( 'status' ) {
+			switch( $request->get_param( 'status' ) ) {
 			case 'approved':
-				$record->approve_for_provisioning();
+				// take an 'approved' Contact and actually have it be provisioned in Moodle as a user
 
-				$helper = new TVS_PMP_MDL_DB_Helper( $this->logger, $this->dbc );
-				$helper->provision_all_approved();
-				// our only option is to provision all in 'approved' state -- this is what Moodle looks at
-				
-				// now make sure we have all Moodle user properties loaded into this Contact
-							
-				
+				$this->logger->debug( sprintf( __( '%s: take approved Contact and attempt to provision. Current status is %s', 'tvs-moodle-parent-provisioning' ), $record, $record->status ) );
+
+				try {
+					$record->approve_for_provisioning();
+
+					$helper = new TVS_PMP_MDL_DB_Helper( $this->logger, $this->dbc );
+					$this->logger->debug( __( 'Attempt now to provision all approved Contacts.', 'tvs-moodle-parent-provisioning' ) );
+					$helper->provision_all_approved();
+					// our only option is to provision all in 'approved' state -- this is what Moodle looks at
+					
+					// now make sure we have all Moodle user properties loaded into this Contact, status should now be 'provisioned'
+					$record->load_mdl_user();	
+					$this->logger->debug( sprintf( __( 'Loaded new Moodle user %s', 'tvs-moodle-parent-provisioning' ), $record->mdl_user ) );
+				}
+				catch ( TVS_PMP_Duplicate_Exception $dupl_exception ) {
+					$this->logger->error( $dupl_exception->getMessage() );
+					return new WP_Error( 'TVS_PMP_Duplicate_Exception', $dupl_exception->getMessage() );
+				}
+				catch ( Exception $e ) {
+					$this->logger->error( $e->getMessage() );
+					return new WP_Error( 'Exception', $e->getMessage() );
+				}
 				break;
 			}	
 		}
 
 		if ( NULL !== $record->id ) {
-			$record->ensure_role_in_static_contexts();
+			try {
+				$record->ensure_role_in_static_contexts();
+			}
+			catch ( Exception $e ) {
+				return new WP_Error( 'Exception', $e->getMessage() );
+			}
 		}
 		else {
 			$this->logger->warn( sprintf( __( 'Cannot ensure role in static contexts for %s as the ID was not set after saving the Contact.', 'tvs-moodle-parent-provisioning' ), $record ) );

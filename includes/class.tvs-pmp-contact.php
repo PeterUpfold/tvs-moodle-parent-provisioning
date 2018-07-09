@@ -172,7 +172,7 @@ class TVS_PMP_Contact {
 	public function __construct( $logger, $dbc ) {
 		$this->logger = $logger;
 		if ( !( $dbc instanceof \mysqli ) ) {
-			throw new ArgumentException( __( 'You must pass an instance of a mysqli object that can fetch the information from Moodle.', 'tvs-moodle-parent-provisioning' ) );
+			throw new InvalidArgumentException( __( 'You must pass an instance of a mysqli object that can fetch the information from Moodle.', 'tvs-moodle-parent-provisioning' ) );
 		}
 		$this->dbc = $dbc;
 	}
@@ -274,7 +274,12 @@ class TVS_PMP_Contact {
 		$this->date_approved = $row->date_approved;
 		$this->date_synced = $row->date_synced;
 	
-		$this->load_mdl_user();
+		try {
+			$this->load_mdl_user();
+		}
+		catch ( Exception $e ) {
+			$this->logger->debug( sprintf( __( 'Failed to load Moodle user for %s. This is normal if the Moodle user has not yet been provisioned. %s', 'tvs-moodle-parent-provisioning' ), $this, $e->getMessage() ) );
+		}
 
 		$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 
@@ -298,8 +303,8 @@ class TVS_PMP_Contact {
 	 *
 	 * @return array of TVS_PMP_Contact
 	 */
-	public static function load_all_approved() {
-		return TVS_PMP_Contact::load_all( 'approved' );
+	public static function load_all_approved( $logger, $dbc ) {
+		return TVS_PMP_Contact::load_all( 'approved', $logger, $dbc );
 	}
 
 	/**
@@ -308,7 +313,7 @@ class TVS_PMP_Contact {
 	 *
 	 * @return array of TVS_PMP_Contact
 	 */
-	public static function load_all( $state ) {
+	public static function load_all( $state, $logger, $dbc ) {
 		global $wpdb;
 
 		$requests_raw = $wpdb->get_results( $wpdb->prepare(
@@ -324,7 +329,7 @@ class TVS_PMP_Contact {
 		$request_objs = array();
 
 		foreach( $requests_raw as $row ) {
-			$request = new TVS_PMP_Contact();
+			$request = new TVS_PMP_Contact( $logger, $dbc );
 			$request->id = (int) $row->id;
 			$request->mis_id = $row->mis_id;
 			$request->external_mis_id = $row->external_mis_id;
@@ -394,7 +399,13 @@ class TVS_PMP_Contact {
 
 			$this->status = 'pending';
 
-			$this->load_mdl_user();
+			try {
+				$this->load_mdl_user();
+			}
+			catch ( Exception $e ) {
+				// this may fail, because the user is not provisioned yet
+				$this->logger->debug( sprintf( __( 'Failed to load Moodle user for %s. This is normal if the Moodle user has not yet been provisioned. %s', 'tvs-moodle-parent-provisioning' ), $this, $e->getMessage() ) );
+			}
 
 			return $affected_rows;
 
@@ -438,7 +449,15 @@ class TVS_PMP_Contact {
 			);
 
 			if ( NULL === $this->mdl_user ) {
-				$this->load_mdl_user();
+
+				try {
+					$this->load_mdl_user();
+				}
+				catch ( Exception $e ) {
+					// this may fail, because the user is not provisioned yet
+					$this->logger->debug( sprintf( __( 'Failed to load Moodle user for %s. This is normal if the Moodle user has not yet been provisioned. %s', 'tvs-moodle-parent-provisioning' ), $this, $e->getMessage() ) );
+				}
+
 			}
 
 			$this->logger->debug( sprintf( __( 'Updated %s. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $affected_rows ) );
@@ -466,12 +485,13 @@ class TVS_PMP_Contact {
 		$new_status = 'approved';
 		$approved_text = sprintf( __( '%s Approved for provisioning at %s -- awaiting next provision cycle', 'tvs-moodle-parent-provisioning' ), $this->__toString(), date('j F Y H:i:s T'));
 		$this->logger->info( $approved_text );
-		$new_sys_comment = $this->system_comment . PHP_EOL . $approved_text;
-		$this->system_comment = $new_sys_comment;//TODO update system_comment
+		$this->append_system_comment( $approved_text );
+		$this->status = $new_status;
+		$this->save();
 
 		// check for pre-existence of a parent with this email
 		$exists = $wpdb->get_results( $wpdb->prepare(
-			'SELECT id FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth WHERE email = %s',
+			'SELECT id FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth WHERE parent_email = %s',
 			array(
 				$this->email
 			)
@@ -481,7 +501,9 @@ class TVS_PMP_Contact {
 			$new_status = 'duplicate';
 	
 			$dupl_comment = sprintf( __( 'Unable to provision %s, as email address \'%s\' already exists in external users table -- %s', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->email, date( 'j F Y H:i:s T') );
-			$new_sys_comment .= PHP_EOL . $dupl_comment;
+			$this->status = $new_status;
+			$this->save();
+			$this->append_system_comment( $dupl_comment );
 			      
 			
 			throw new TVS_PMP_Duplicate_Exception(

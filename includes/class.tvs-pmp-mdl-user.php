@@ -62,6 +62,11 @@ class TVS_PMP_mdl_user {
 	 */
 	public $suspended;
 
+	/**
+	 * The prefix used for the Moodle database tables.
+	 */
+	public $dbprefix = 'mdl_';
+
 	/** 
 	 * Construct the object
 	 */
@@ -94,7 +99,7 @@ class TVS_PMP_mdl_user {
 		switch( $property ) {
 
 		case 'idnumber':
-			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username, idnumber, suspended FROM mdl_user WHERE idnumber = ?' ) ) {
+			if ( ! $stmt = $this->dbc->prepare( "SELECT id, username, idnumber, suspended FROM {$this->dbprefix}user WHERE idnumber = ?" ) ) {
 
 				throw new Exception( __( 'Unable to prepare query to load a Moodle user', 'tvs-moodle-parent-provisioning' ) );
 			}	
@@ -122,7 +127,7 @@ class TVS_PMP_mdl_user {
 			break;
 
 		case 'id':
-			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username, idnumber, suspended FROM mdl_user WHERE id = ?' ) ) {
+			if ( ! $stmt = $this->dbc->prepare( "SELECT id, username, idnumber, suspended FROM {$this->dbprefix}user WHERE id = ?" ) ) {
 
 				throw new Exception( __( 'Unable to prepare query to load a Moodle user', 'tvs-moodle-parent-provisioning' ) );
 			}	
@@ -150,7 +155,7 @@ class TVS_PMP_mdl_user {
 			break;
 
 		case 'username':
-			if ( ! $stmt = $this->dbc->prepare( 'SELECT id, username, idnumber, suspended FROM mdl_user WHERE username = ?' ) ) {
+			if ( ! $stmt = $this->dbc->prepare( "SELECT id, username, idnumber, suspended FROM {$this->dbprefix}user WHERE username = ?" ) ) {
 
 				throw new Exception( __( 'Unable to prepare query to load a Moodle user', 'tvs-moodle-parent-provisioning' ) );
 			}	
