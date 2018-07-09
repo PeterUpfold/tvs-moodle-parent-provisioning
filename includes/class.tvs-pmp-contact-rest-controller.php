@@ -342,14 +342,14 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		if ( NULL != $id ) {
 			$record->id = $id;
-			if ( ! $record->load() ) {
+			if ( ! $record->load( 'id' ) ) {
 				$this->logger->warn( sprintf( __( 'Unable to load Contact with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
 				$record = NULL;	
 			}
 		}
 		else if ( NULL != $external_mis_id ) {
 			$record->external_mis_id = $external_mis_id;
-			if ( ! $record->load() ) {
+			if ( ! $record->load( 'external_mis_id' ) ) {
 				$this->logger->warn( sprintf( __( 'Unable to load Contact with external MIS ID %s', 'tvs-moodle-parent-provisioning' ), $external_mis_id ) );
 				$record = NULL;	
 			}
@@ -378,6 +378,12 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		$this->ensure_logger_and_dbc();
 
 		$record = $this->try_get_record_from_request( $request );
+
+		// if $record is NULL, it does not exist, so we will prepare to make a new record
+		if ( NULL === $record ) {
+			$this->logger->debug( __( 'Prepare a new Contact as the fetched Contact was NULL (assuming does not exist).', 'tvs-moodle-parent-provisioning' ) );
+			$record = new TVS_PMP_Contact( $this->logger, $this->dbc );
+		}
 
 
 		if ( $request->get_param( 'mis_id' ) ) {

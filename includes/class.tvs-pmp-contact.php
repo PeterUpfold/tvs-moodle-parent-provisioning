@@ -373,6 +373,8 @@ class TVS_PMP_Contact {
 				)
 			);
 
+			$this->logger->debug( sprintf( __( 'Affected rows when creating Contact: %d', 'tvs-moodle-parent-provisioning' ), $affected_rows ) );
+
 			if ( $affected_rows !== false ) {
 				$this->id = $wpdb->insert_id;
 				$this->logger->info( sprintf( __( 'Created a new Contact %s.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
