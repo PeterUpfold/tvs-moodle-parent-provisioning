@@ -448,15 +448,15 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 					
 					// now make sure we have all Moodle user properties loaded into this Contact, status should now be 'provisioned'
 					$record->load_mdl_user();	
-					$this->logger->debug( sprintf( __( 'Loaded new Moodle user %s', 'tvs-moodle-parent-provisioning' ), $record->mdl_user ) );
+					$this->logger->debug( sprintf( __( 'Loaded new Moodle user %d', 'tvs-moodle-parent-provisioning' ), $record->mdl_user_id ) );
 				}
 				catch ( TVS_PMP_Duplicate_Exception $dupl_exception ) {
 					$this->logger->error( $dupl_exception->getMessage() );
-					return new WP_Error( 'TVS_PMP_Duplicate_Exception', $dupl_exception->getMessage() );
+					return $this->prepare_error( 'tvs_pmp_duplicate', $dupl_exception->getMessage(), $dupl_exception, 400 );
 				}
 				catch ( Exception $e ) {
 					$this->logger->error( $e->getMessage() );
-					return new WP_Error( 'Exception', $e->getMessage() );
+					return $this->prepare_error( 'tvs_pmp_exception_when_provisioning', __( 'Unable to complete the Provisioning process. Please check the application log file.', 'tvs-moodle-parent-provisioning' ), $e, 500 );
 				}
 				break;
 			}	
@@ -467,7 +467,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 				$record->ensure_role_in_static_contexts();
 			}
 			catch ( Exception $e ) {
-				return new WP_Error( 'Exception', $e->getMessage() );
+				return $this->prepare_error( 'tvs_pmp_exception_when_ensuring_static_contexts', __( 'Unable to ensure the appropriate role assignmentswere set in the static contexts. Please check the application log file.', 'tvs-moodle-parent-provisioning' ), $e, 500 );
 			}
 		}
 		else {
@@ -482,6 +482,39 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 				$record
 			)
 		);
+
+	}
+
+
+	/**
+	 * Return a new WP_Error object that contains the appropriate data, including full exception
+	 * data if WP_DEBUG is true.
+	 *
+	 * @param string $identifier The identifying code of the WP_Error.
+	 * @param string $friendly_message Localised string containing friendly error message.
+	 * @param Exception $exception The exception encountered.
+	 * @param int $status_code The HTTP status code to return.
+	 * @param array $other_data Any other data to return in the WP_Error object.
+	 *
+	 * @return WP_Error
+	 */
+	protected function prepare_error( $identifier, $friendly_message, $exception, $status_code, $other_data = NULL ) {
+
+		$error_data = array();
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && $exception instanceof Exception ) {
+			$error_data['exception'] = $exception->getMessage();
+		}
+
+		$error_data['status'] = $status_code;
+
+		if ( NULL != $other_data && is_array( $other_data ) && count( $other_data ) > 0 ) {
+			foreach( $other_data as $key => $item ) {
+				$error_data[$key] = $item;
+			}
+		}
+
+		return new WP_Error( $identifier, $friendly_message, $error_data );
 
 	}
 
