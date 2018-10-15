@@ -22,6 +22,7 @@
 
 require_once( dirname( __FILE__ ) . '/class-tvs-wp-list-table.php' );
 require_once( dirname( __FILE__ ) . '/class.tvs-pmp-mdl-user.php' );
+require_once( dirname( __FILE__ ) . '/class.tvs-pmp-mdl-db-helper.php' );
 
 
 if ( ! defined ( 'TVS_PMP_REQUIRED_CAPABILITY' ) ) {
@@ -51,6 +52,16 @@ class TVS_PMP_Auth_Table extends TVS_WP_List_Table {
 	protected $moodle_dbc = null;
 
 	/**
+	 * A Monolog Logger object to which we push log entries.
+	 */
+	protected $logger = NULL;
+
+	/**
+	 * A stream containing log entries that have been emittted from the $logger.
+	 */
+	protected $local_log_stream = NULL;
+
+	/**
 	 * Constructor
 	 */
 	public function __construct( $args = array() ) {
@@ -65,6 +76,8 @@ class TVS_PMP_Auth_Table extends TVS_WP_List_Table {
 		if ( $this->moodle_dbc->connect_errno ) {
 			throw new \Exception( $this->moodle_dbc->connect_error );
 		}
+
+		$this->logger = TVS_PMP_MDL_DB_Helper::create_logger( $this->local_log_stream );
 
 		return parent::__construct(
 			array(
@@ -265,7 +278,9 @@ class TVS_PMP_Auth_Table extends TVS_WP_List_Table {
 
 			if ( $this->moodle_dbc ) {
 				foreach( $results as $result ) {
-					$mdl_user = new TVS_PMP_mdl_user( $result->parent_email, $this->moodle_dbc );
+					$mdl_user = new TVS_PMP_mdl_user( $this->logger, $this->moodle_dbc );
+					$mdl_user->username = $parent_email;
+					$mdl_user->load( 'username' );
 					$result->is_orphaned = $mdl_user->is_orphaned();
 					$result->user = $mdl_user;
 				}

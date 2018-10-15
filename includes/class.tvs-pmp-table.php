@@ -39,6 +39,16 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 
 
 	/**
+	 * A Monolog Logger object to which we push log entries.
+	 */
+	protected $logger = NULL;
+
+	/**
+	 * A stream containing log entries that have been emittted from the $logger.
+	 */
+	protected $local_log_stream = NULL;
+
+	/**
 	 * The name of the database table containing the records.
 	 */
 	public static $db_table_name = 'tvs_parent_moodle_provisioning';
@@ -79,6 +89,8 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 		if ( $this->moodle_db_conn->connect_errno ) {
 			throw new \Exception( $this->moodle_db_conn->connect_error );
 		}
+
+		$this->logger = TVS_PMP_MDL_DB_Helper::create_logger( $this->local_log_stream );
 
 		return parent::__construct(
 			array(
@@ -251,7 +263,8 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 
 		<?php if ( 'pending' == $item->status && $this->moodle_db_conn ) :
 		
-			$moodle_user = new TVS_PMP_mdl_user(  $item->parent_email, $this->moodle_db_conn );
+		$moodle_user = new TVS_PMP_mdl_user( $this->logger, $this->moodle_db_conn );
+		$moodle_user->username = $item->parent_email;
 			if ( ! $moodle_user->is_orphaned() ) {
 				?>
 				<span class="dashicons dashicons-warning"></span> <?php _e( 'An existing Moodle account with this email address was detected.', 'tvs-moodle-parent-provisioning' ); ?>
