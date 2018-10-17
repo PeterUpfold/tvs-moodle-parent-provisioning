@@ -578,7 +578,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		$this->ensure_logger_and_dbc();
 
-		$records = TVS_PMP_Contact::load_all( $request->get_param( 'status' ) );	
+		$records = TVS_PMP_Contact::load_all( $request->get_param( 'status' ), $this->logger, $this->dbc );	
 
 		return rest_ensure_response( $records );
 

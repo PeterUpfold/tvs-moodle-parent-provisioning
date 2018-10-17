@@ -211,6 +211,42 @@ class TVS_PMP_Contact_Mapping {
 
 
 	/**
+	 * Load all contact mappings.
+	 *
+	 * @return array of TVS_PMP_Contact_Mapping
+	 */
+	public static function load_all( $logger, $dbc ) {
+		global $wpdb;
+
+		$mappings_raw = $wpdb->get_results( $wpdb->prepare(
+			'SELECT id, contact_id, mis_id, external_mis_id, mdl_user_id, adno, username, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact_mapping'
+		) );
+
+		if ( count( $mappings_raw ) < 1 ) {
+			return array();
+		}
+
+		$mapping_objs = array();
+
+		foreach( $mapping_raw as $row ) {
+			$mapping = new TVS_PMP_Contact_Mapping( $logger, $dbc );
+			$mapping->id = (int) $row->id;
+			$mapping->contact_id = (int) $row->contact_id;
+			$mapping->mis_id = $row->mis_id;
+			$mapping->external_mis_id = $row->external_mis_id;
+			$mapping->mdl_user_id = (int) $row->mdl_user_id;
+			$mapping->adno = $row->adno;
+			$mapping->username = $row->username;
+			$mapping->date_synced = $row->date_synced;
+			$mapping_objs[] = $mapping;
+		}
+
+		return $mapping_objs;
+
+	}
+
+
+	/**
 	 * Save this Contact Mapping in our internal database tables. Note that this method **does not** perform
 	 * the mapping or unmapping to make Moodle match our tables.
 	 * 

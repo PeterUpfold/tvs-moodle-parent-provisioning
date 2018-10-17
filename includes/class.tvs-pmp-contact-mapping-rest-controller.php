@@ -221,6 +221,22 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 		);
 	}
 
+	/**
+	 * Retrieve all Contact Mappings matching the properties specified in the $request.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_items( WP_REST_Request $request ) {
+		//TODO verify that permissions checks do not need to be added here
+		$this->ensure_logger_and_dbc();
+
+		$records = TVS_PMP_Contact_Mapping::load_all( $this->logger, $this->dbc );	
+
+		return rest_ensure_response( $records );
+	}
+
 
 	/**
 	 * Handle a request to ensure that the specified Contact Mapping exists. This will either create
