@@ -98,7 +98,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 				'methods'                            => WP_REST_Server::EDITABLE,
 				'callback'                           => array( $this, 'ensure_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
-				'args'                               => array( $this, 'ensure_args' )
+				'args'                               => $this->ensure_args()
 			),
 
 			/* GET /contact-mapping ("get all contact mappings") */
