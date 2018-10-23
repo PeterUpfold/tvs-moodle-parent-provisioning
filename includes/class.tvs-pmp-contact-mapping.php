@@ -244,17 +244,35 @@ class TVS_PMP_Contact_Mapping {
 
 		$mapping_objs = array();
 
-		foreach( $mapping_raw as $row ) {
-			$mapping = new TVS_PMP_Contact_Mapping( $logger, $dbc );
-			$mapping->id = (int) $row->id;
-			$mapping->contact_id = (int) $row->contact_id;
-			$mapping->mis_id = $row->mis_id;
-			$mapping->external_mis_id = $row->external_mis_id;
-			$mapping->mdl_user_id = (int) $row->mdl_user_id;
-			$mapping->adno = $row->adno;
-			$mapping->username = $row->username;
-			$mapping->date_synced = $row->date_synced;
-			$mapping_objs[] = $mapping;
+		foreach( $mappings_raw as $row ) {
+
+			try {
+				// get contact from ID. We need to pass the Contact to the constructor for Contact Mapping
+				// TODO: this will be slow as we will do extra queries to get each Contact for each Mapping. Use a join above??
+				$contact = new TVS_PMP_Contact( $logger, $dbc );
+				$contact->id = (int) $row->contact_id;
+				if ( ! $contact->load( 'id' ) ) {
+					throw new UnexpectedValueException(
+						sprintf( __( 'Unable to load Contact Mapping %d, because the associated Contact with ID %d could not be loaded.', 'tvs-moodle-parent-provisioning' ),
+						(int) $row->id,
+						(int) $row->contact_id )
+					);
+				}
+
+				$mapping = new TVS_PMP_Contact_Mapping( $logger, $dbc, $contact );
+				$mapping->id = (int) $row->id;
+				$mapping->contact_id = (int) $row->contact_id;
+				$mapping->mis_id = $row->mis_id;
+				$mapping->external_mis_id = $row->external_mis_id;
+				$mapping->mdl_user_id = (int) $row->mdl_user_id;
+				$mapping->adno = $row->adno;
+				$mapping->username = $row->username;
+				$mapping->date_synced = $row->date_synced;
+				$mapping_objs[] = $mapping;
+			}
+			catch ( Exception $e ) {
+				$logger->warning( sprintf( __( 'Failed to load Contact Mapping %d. Will continue to try to load other Contact Mappings. Inner exception: %s', 'tvs-moodle-parent-provisioning' ), (int) $row->id, $e->getMessage() ) );
+			}
 		}
 
 		return $mapping_objs;
@@ -441,7 +459,7 @@ class TVS_PMP_Contact_Mapping {
 		}
 
 		if ( ! $this->contact->mdl_user->id ) {
-			$message = sprintf_( __( 'Unable to map %s, as the associated Contact %s has an invalid mdl_user ID.', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
+			$message = sprintf( __( 'Unable to map %s, as the associated Contact %s has an invalid mdl_user ID.', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
 			$this->logger->warn( $message );
 			throw new InvalidArgumentException( $message );
 		}

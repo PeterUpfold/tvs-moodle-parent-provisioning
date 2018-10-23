@@ -282,7 +282,7 @@ class TVS_PMP_MDL_DB_Helper {
 	 *
 	 * @return int The ID of the new context
 	 */
-	public function add_context( int $contextlevel, int $instanceid, int $depth ) {
+	public function add_context( $contextlevel, $instanceid, $depth ) {
 		$this->logger->debug( sprintf( __( 'Add context for contextlevel %d with instance ID %d and depth %d', 'tvs-moodle-parent-provisioning' ), $contextlevel, $instanceid, $depth ) );
 
 		$stmt = $this->dbc->prepare( "INSERT INTO {$this->dbprefix}context (contextlevel, instanceid, depth) VALUES (?, ?, ?)" );

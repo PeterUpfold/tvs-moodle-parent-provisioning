@@ -155,7 +155,7 @@ class TVS_PMP_Contact {
 	/**
 	 * The TVS_PMP_mdl_user object that represents the Moodle user associated with this Contact.
 	 */
-	protected $mdl_user = NULL;
+	public $mdl_user = NULL;
 
 	/**
 	 * Cache of Contact Mappings that are associated with this Contact.
