@@ -94,6 +94,11 @@ class TVS_PMP_Contact_Mapping {
 	protected $dbc = NULL;
 
 	/**
+	 * Instance of TVS_PMP_MDL_DB_Helper class to fetch information from Moodle database.
+	 */
+	protected $mdl_db_helper = NULL;
+
+	/**
 	 * The TVS_PMP_mdl_user object that represents the Moodle user associated with the target
 	 * of this Contact Mapping.
 	 */
@@ -146,6 +151,17 @@ class TVS_PMP_Contact_Mapping {
 		$set_prefix = 'tvs-moodle-parent-provisioning-';
 		TVS_PMP_Contact_Mapping::$target_role_id = get_option(  $set_prefix . 'moodle-parent-role' );
 		TVS_PMP_Contact_Mapping::$modifier_id = get_option( $set_prefix . 'moodle-modifier-id' );
+	}
+
+	/**
+	 * Lazily load a TVS_PMP_MDL_DB_Helper instance as soon as we need one.
+	 */
+	protected function get_mdl_db_helper() {
+		if ( $this->mdl_db_helper instanceof TVS_PMP_MDL_DB_Helper ) {
+			return $this->mdl_db_helper;
+		}
+		$this->mdl_db_helper = new TVS_PMP_MDL_DB_Helper( $this->logger, $this->dbc );
+		return $this->mdl_db_helper;
 	}
 
 	/**
@@ -218,9 +234,9 @@ class TVS_PMP_Contact_Mapping {
 	public static function load_all( $logger, $dbc ) {
 		global $wpdb;
 
-		$mappings_raw = $wpdb->get_results( $wpdb->prepare(
+		$mappings_raw = $wpdb->get_results( 
 			'SELECT id, contact_id, mis_id, external_mis_id, mdl_user_id, adno, username, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact_mapping'
-		) );
+		) ;
 
 		if ( count( $mappings_raw ) < 1 ) {
 			return array();
@@ -391,7 +407,7 @@ class TVS_PMP_Contact_Mapping {
 	 * @return bool true if the Mapping is already present
 	 */
 	public function is_mapped() {
-		$context = $this->mdl_db_helper->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
+		$context = $this->get_mdl_db_helper()->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
 
 		$role_assignment = $this->get_role_assignment();
 		return ( $role_assignment > 0 );
@@ -408,7 +424,7 @@ class TVS_PMP_Contact_Mapping {
 			return $this->role_assignment;
 		}
 
-		$this->role_assignment = $this->mdl_db_helper->get_role_assignment( $this->contact->mdl_user->id, TVS_PMP_Contact_Mapping::$target_role_id, $context );
+		$this->role_assignment = $this->get_mdl_db_helper()->get_role_assignment( $this->contact->mdl_user->id, TVS_PMP_Contact_Mapping::$target_role_id, $context );
 		return $this->role_assignment;
 	}
 
@@ -436,9 +452,9 @@ class TVS_PMP_Contact_Mapping {
 		}
 
 		// does a context exist that we can use?
-		$context = $this->mdl_db_helper->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
+		$context = $this->get_mdl_db_helper()->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
 		if ( ! $context ) {
-			$context = $this->mdl_db_helper->add_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
+			$context = $this->get_mdl_db_helper()->add_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
 		}
 
 		// does the role assignment already exist for this context?

@@ -256,7 +256,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 
 		// look up the contact with the passed contact_id
 		$contact = new TVS_PMP_Contact( $this->logger, $this->dbc );
-		$contact->id = $request->get_param( 'contact_id' );
+		$contact->id = intval( $request->get_param( 'contact_id' ) );
 		if  ( ! $contact->load( 'id' ) ) {
 			return new WP_Error( sprintf(
 				__( 'Unable to find the Contact with internal ID %d. Cannot therefore ensure that a Contact Mapping exists.', 'tvs-moodle-parent-provisioning' ),
