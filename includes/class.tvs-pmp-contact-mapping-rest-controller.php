@@ -132,7 +132,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			array(
 				'methods'                            => WP_REST_Server::DELETABLE,
 				'callback'                           => array( $this, 'delete_item' ),
-				'permission_callback'                => array( $this, 'user_has_permision' ),
+				'permission_callback'                => array( $this, 'user_has_permission' ),
 				'args'                               => $this->get_delete_args(),
 			)
 		) );
@@ -335,6 +335,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	public function delete_item( WP_REST_Request $request ) {
 		$this->ensure_logger_and_dbc();
 
+		$this->logger->debug( 'delete item ' );
+
 		$record = $this->try_get_record_from_request( $request );
 
 		if ( ! $record || ! $record->id ) {
@@ -362,7 +364,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 * @param WP_REST_Request $request Full details about the request.
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function get_item( WP_REST_Request $requset ) {
+	public function get_item( WP_REST_Request $request ) {
 		$this->ensure_logger_and_dbc();
 
 		$record = $this->try_get_record_from_request( $request );
@@ -389,14 +391,17 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 
 		$this->ensure_logger_and_dbc();
 
+		$contact = NULL;
+
 		// determine if we have a unique ID to look up
 		$id = $request->get_param( 'id' );
 
 		$contact_id = $request->get_param( 'contact_id' );
-		$adno = $request->get_param( 'adno' );
-
 		$mdl_user_id = $request->get_param( 'mdl_user_id' );
-		if ( ! $contact_id  && $mdl_user_id ) {
+
+		$this->logger->debug( 'Running try_get_record_from_request' );
+
+		if ( $mdl_user_id ) {
 			// look up Contact ID from Moodle user
 			$contact = new TVS_PMP_Contact( $this->logger, $this->dbc );
 			$contact->mdl_user_id = $mdl_user_id;
@@ -406,7 +411,18 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			}
 		}
 
-		$record = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc ); // we will 'load' to see if it exists
+		if ( ! $contact && $contact_id ) {
+			$contact = new TVS_PMP_Contact( $this->logger, $this->dbc );
+			$contact->id = $contact_id;
+			if ( ! $contact->load( 'id' ) ) {
+				$this->logger->debug( sprintf( __( 'Found Contact \'%s\'.', 'tvs-moodle-parent-provisioning' ), $contact ) );
+			}
+		}
+
+		$adno = $request->get_param( 'adno' );
+
+
+		$record = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc, $contact ); // we will 'load' to see if it exists
 
 		if ( NULL != $id ) {
 			$record->id = $id;
