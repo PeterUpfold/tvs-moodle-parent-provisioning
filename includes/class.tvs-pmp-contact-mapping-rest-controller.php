@@ -106,7 +106,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 				'methods'                            => WP_REST_Server::READABLE,
 				'callback'                           => array( $this, 'get_items' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
-			)
+			),
+
 		) );
 
 			/* GET /contact-mapping/target/[moodleuserid] */
@@ -132,7 +133,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 				'methods'                            => WP_REST_Server::DELETABLE,
 				'callback'                           => array( $this, 'delete_item' ),
 				'permission_callback'                => array( $this, 'user_has_permision' ),
-				'args'                               => array( $this, 'get_delete_args' ),
+				'args'                               => $this->get_delete_args(),
 			)
 		) );
 
