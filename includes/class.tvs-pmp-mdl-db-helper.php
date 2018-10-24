@@ -243,6 +243,8 @@ class TVS_PMP_MDL_DB_Helper {
 		$stmt->fetch();
 		$stmt->close();
 
+		return $context_id;
+
 	}
 	/**
         * Remove the specified role assignment by its ID.

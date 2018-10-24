@@ -458,6 +458,18 @@ class TVS_PMP_Contact_Mapping {
 			return true;
 		}
 
+		if ( ! $this->contact instanceof TVS_PMP_Contact ) {
+			$message = sprintf( __( 'Unable to map %s, as the associated Contact had not been loaded properly.', 'tvs-moodle-parent-provisioning' ), $this->__toString() );
+			$this->logger->warn( $message );
+			throw new InvalidArgumentException( $message );
+		}
+
+		if ( ! $this->contact->mdl_user instanceof TVS_PMP_mdl_user ) {
+			$message = sprintf( __( 'Unable to map %s, as the associated Contact %s has an invalid mdl_user object.', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
+			$this->logger->warn( $message );
+			throw new InvalidArgumentException( $message );
+		}
+
 		if ( ! $this->contact->mdl_user->id ) {
 			$message = sprintf( __( 'Unable to map %s, as the associated Contact %s has an invalid mdl_user ID.', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
 			$this->logger->warn( $message );
