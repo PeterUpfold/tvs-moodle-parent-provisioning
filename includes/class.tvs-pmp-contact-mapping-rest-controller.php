@@ -124,6 +124,13 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 				'permission_callback'                => array( $this, 'user_has_permission' ),
 			),
 
+			array(
+				'methods'                            => WP_REST_Server::EDITABLE,
+				'callback'                           => array( $this, 'ensure_item' ),
+				'permission_callback'                => array( $this, 'user_has_permission' ),
+				'args'                               => $this->ensure_args()
+			),
+
 			/* There is no support for 'updating' a Mapping, as the only properties that are relevant are the target user
 			 * and the user who is given permissions to the target user.
 			 *
@@ -337,7 +344,18 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 
 		$this->logger->debug( 'delete item ' );
 
-		$record = $this->try_get_record_from_request( $request );
+
+		/* explicitly do not use Moodle user ID -- we are looking for the Contact, not the target
+		   of the Contact Mapping
+		 */
+
+		try {
+			$record = $this->try_get_record_from_request( $request, /* ignore_params */ array( 'mdl_user_id' ) );
+		}
+		catch ( Exception $e ) {
+			$this->logger->error( $e->getMessage() );
+			return new WP_Error( 'failed_get_record', __( 'Unable to look up the Contact Mapping.', 'tvs-moodle-parent-provisioning' ) );
+		}
 
 		if ( ! $record || ! $record->id ) {
 			return new WP_Error( 'rest_post_invalid_id', __( 'Unable to look up the Contact Mapping.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
@@ -384,27 +402,42 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 * submitted in the $request.
 	 *
 	 * @param WP_REST_Request $request Full details about the request.
+	 * @param array List of parameters to ignore when looking up the record
 	 *
 	 * @return TVS_PMP_Contact_Mapping
 	 */
-	protected function try_get_record_from_request( WP_REST_Request $request ) {
+	protected function try_get_record_from_request( WP_REST_Request $request, $ignore_params = array() ) {
 
 		$this->ensure_logger_and_dbc();
 
 		$contact = NULL;
 
+		if ( ! is_array( $ignore_params ) ) {
+			throw new InvalidArgumentException( __( 'The $ignore_params parameter must be an array.', 'tvs-moodle-parent-provisioning' ) );
+		}
+
 		// determine if we have a unique ID to look up
 		$id = $request->get_param( 'id' );
 
-		$contact_id = $request->get_param( 'contact_id' );
-		$mdl_user_id = $request->get_param( 'mdl_user_id' );
+		$this->logger->debug( print_r( $ignore_params, TRUE ) );
+
+		if ( ! in_array( 'contact_id', $ignore_params ) ) {
+			$contact_id = $request->get_param( 'contact_id' );
+		}
+		if ( ! in_array( 'mdl_user_id', $ignore_params ) ) {
+			$mdl_user_id = $request->get_param( 'mdl_user_id' );
+		}
+
+		$this->logger->debug( print_r( $request->get_params(), TRUE ) );
+		$this->logger->debug( $contact_id );
+		$this->logger->debug( 'mdl_user_id: ' . $mdl_user_id );
 
 		$this->logger->debug( 'Running try_get_record_from_request' );
 
-		if ( $mdl_user_id ) {
+		if ( isset( $mdl_user_id ) && $mdl_user_id > 0 ) {
 			// look up Contact ID from Moodle user
 			$contact = new TVS_PMP_Contact( $this->logger, $this->dbc );
-			$contact->mdl_user_id = $mdl_user_id;
+			$contact->mdl_user_id = intval( $mdl_user_id );
 			if ( $contact->load( 'mdl_user_id' ) ) {
 				$this->logger->debug( sprintf( __( 'Found Contact \'%s\' to match Moodle user ID %d', 'tvs-moodle-parent-provisioning' ), $contact, $contact->mdl_user_id ) );
 				$contact_id = $contact->id;
@@ -413,8 +446,11 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 
 		if ( ! $contact && $contact_id ) {
 			$contact = new TVS_PMP_Contact( $this->logger, $this->dbc );
-			$contact->id = $contact_id;
-			if ( ! $contact->load( 'id' ) ) {
+			$contact->id = intval( $contact_id );
+
+			$this->logger->debug( 'contact_id ' . $contact_id );
+
+			if ( $contact->load( 'id' ) ) {
 				$this->logger->debug( sprintf( __( 'Found Contact \'%s\'.', 'tvs-moodle-parent-provisioning' ), $contact ) );
 			}
 		}
@@ -433,7 +469,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 		}
 		else if ( NULL != $contact_id && NULL != $adno ) {
 			// look up by internal Contact ID and Adno combination
-			$record->contact_id = $contact_id;
+			$this->logger->debug( __( 'Try to load Mapping by Contact ID and Adno', 'tvs-moodle-parent-provisioning' ) );
+			$record->contact_id = intval( $contact_id );
 			$record->adno = $adno;
 			if ( ! $record->load( 'contact_id_and_adno' ) ) {
 				$this->logger->warn( sprintf( __( 'Unable to load Contact Mapping with contact ID %d and Adno \'%s\'', 'tvs-moodle-parent-provisioning' ), $contact_id, $adno ) );

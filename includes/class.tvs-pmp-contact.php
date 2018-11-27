@@ -200,7 +200,9 @@ class TVS_PMP_Contact {
 				throw new InvalidArgumentException( $error );
 			}
 
-			$this->logger->debug( sprintf( __( 'Load Contact with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ), $this->id, $table_name ) );
+			$this->logger->debug( sprintf( 
+				__( 'Load Contact with ID %d from our database table \'%s\'.', 'tvs-moodle-parent-provisioning' ),
+				$this->id, $table_name ) );
 		
 			$row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}{$table_name} WHERE id = %d",

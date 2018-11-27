@@ -373,6 +373,8 @@ class TVS_PMP_Contact_Mapping {
 
 		$table_name = TVS_PMP_Contact_Mapping::$table_name;
 
+		$this->logger->debug( sprintf( __( 'Attempt to delete Mapping with internal ID %d', 'tvs-moodle-parent-provisioning' ), $this->id ) );
+
 		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
 			$error = __( 'The $id variable must be set to a non-zero integer.', 'tvs-moodle-parent-provisioning' );
 			$this->logger->error( $error );
@@ -386,12 +388,14 @@ class TVS_PMP_Contact_Mapping {
 			throw new LogicException( $error );
 		}
 
-		return $wpdb->delete( $table_name, array(
+		$this->logger->debug( sprintf( __( 'Delete from table %s, ID %d', 'tvs-moodle-parent-provisioning' ), $table_name, $this->id ) );
+
+		return $wpdb->delete( $wpdb->prefix . $table_name, array(
 			'id'                          => $this->id
-		),
-		array(
-			'%d'
-		)
+			),
+			array(
+				'%d'
+			)
 		);
 	}
 
@@ -402,8 +406,8 @@ class TVS_PMP_Contact_Mapping {
 	 * @param $row Array Data retrieved from $wpdb for this Contact Mapping
 	 */
 	public function load_from_row( $row ) {
-		$this->id              = $row->id;
-		$this->contact_id      = $row->contact_id;
+		$this->id              = intval( $row->id );
+		$this->contact_id      = intval( $row->contact_id );
 		$this->mis_id          = $row->mis_id;
 		$this->external_mis_id = $row->external_mis_id;
 		$this->adno            = $row->adno;
@@ -427,7 +431,8 @@ class TVS_PMP_Contact_Mapping {
 	public function is_mapped() {
 		$context = $this->get_mdl_db_helper()->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
 
-		$role_assignment = $this->get_role_assignment();
+		$role_assignment = $this->get_role_assignment( $context );
+		$this->logger->debug( sprintf( __( '%s: is_mapped found role assignment result: %d', 'tvs-moodle-parent-provisioning' ), __METHOD__, $role_assignment ) );
 		return ( $role_assignment > 0 );
 	}
 
@@ -435,15 +440,17 @@ class TVS_PMP_Contact_Mapping {
 	 * Get the role assignment ID that represents this connection between the two users
 	 * within the Moodle users table.
 	 *
+	 * @param int $context The context ID that represents a potential connection between the two users.
+	 *
 	 * @return int The role assignment ID, or 0.
 	 */
-	public function get_role_assignment() {
-		if ( $this->role_assignment ) {
-			return $this->role_assignment;
-		}
+	public function get_role_assignment( $context ) {
+		/*if ( $this->role_assignment_id ) {
+			return $this->role_assignment_id;
+	}*/
 
-		$this->role_assignment = $this->get_mdl_db_helper()->get_role_assignment( $this->contact->mdl_user->id, TVS_PMP_Contact_Mapping::$target_role_id, $context );
-		return $this->role_assignment;
+		$this->role_assignment_id = $this->get_mdl_db_helper()->get_role_assignment( $this->contact->mdl_user->id, TVS_PMP_Contact_Mapping::$target_role_id, $context );
+		return $this->role_assignment_id;
 	}
 
 	/**
@@ -488,7 +495,7 @@ class TVS_PMP_Contact_Mapping {
 		}
 
 		// does the role assignment already exist for this context?
-		$role_assignment = $this->get_role_assignment();
+		$role_assignment = $this->get_role_assignment( $context );
 		if ( ! $role_assignment ) {
 			// create role assignment
 			$role_assignment = $this->contact->mdl_user->add_role_assignment( TVS_PMP_Contact_Mapping::$target_role_id, $context, TVS_PMP_Contact_Mapping::$modifier_id, '', 0, 0 );
@@ -506,6 +513,9 @@ class TVS_PMP_Contact_Mapping {
 	 * @return int|bool The number of rows affected if the removal was successful, or bool true if the mapping did not exist in the first place.
 	 */
 	public function unmap() {
+
+		$this->logger->debug( sprintf( __( 'Attempt to unmap %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+
 		if ( ! $this->is_mapped() ) {
 			$this->logger->info( sprintf( __( '%s is already not mapped to %s', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact ) );
 			return true;
@@ -518,10 +528,20 @@ class TVS_PMP_Contact_Mapping {
 			throw new InvalidArgumentException( $message );
 		}
 
-		$role_assignment = $this->get_role_assignment();
+		// does a context exist to unmap?
+		$context = $this->get_mdl_db_helper()->get_context( TVS_PMP_MDL_DB_Helper::CONTEXT_USER, $this->mdl_user->id, /* depth */ 2 );
+
+		if ( ! $context ) {
+			$message = sprintf( __( 'Unable to unmap %s, as unable to get a Moodle context for Moodle user %d', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
+			$this->logger->warn( $message );
+			throw new InvalidArgumentException( $message );
+		}
+
+		$role_assignment = $this->get_role_assignment( $context );
 		if ( $role_assignment ) {
 			// remove the assignment
 			return $this->contact->mdl_user->remove_role_assignment( $role_assignment );
+			$this->role_assignment_id = NULL; // flush our cache of this value
 		}
 		else {
 			$this->logger->info( sprintf( __( 'The Contact user %s was missing the appropriate role %d assigned in the context %d for the target Contact Mapping user %s, so it could not be deleted. Role assignment ID: %d', 'tvs-moodle-parent-provisioning' ), $this->contact, TVS_PMP_Contact_Mapping::$parent_role_id, $context, $this->__toString(), $role_assignment ) );

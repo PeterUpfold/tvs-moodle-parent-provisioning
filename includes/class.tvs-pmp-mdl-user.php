@@ -337,6 +337,34 @@ class TVS_PMP_mdl_user {
 	}
 
 	/**
+	 * Remove the role assignment with the specified primary key ID.
+	 *
+	 * @param int $role_assignment_id The role assignment primary key ID.
+	 *
+	 * @return int The number of affected rows.
+	 */
+	public function remove_role_assignment( $role_assignment_id ) {
+		$this->logger->debug( sprintf( __( 'Remove role assignment %d', 'tvs-moodle-parent-provisioning' ), $role_assignment_id ) );
+
+		$stmt = $this->dbc->prepare( "DELETE FROM {$this->dbprefix}role_assignments WHERE id = ?" );
+
+		if ( ! $stmt ) {
+			throw new Exception( sprintf( __( 'Failed to prepare the database statement to remove a role assignment. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+		}
+
+		$stmt->bind_param( 'i', $role_assignment_id );
+		$stmt->execute();
+
+		$this->logger->info( sprintf( __( 'Removed role assignment: %d. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $role_assignment_id, $stmt->affected_rows ) );
+
+		$rows = $stmt->affected_rows;
+
+		$stmt->close();
+
+		return $rows;
+	}
+
+	/**
 	 * Return a string representation of the object.
 	 *
 	 * @return string

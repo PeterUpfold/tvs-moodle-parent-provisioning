@@ -241,6 +241,9 @@ class TVS_PMP_MDL_DB_Helper {
 
 		$stmt->bind_result( $context_id );
 		$stmt->fetch();
+
+		$this->logger->debug( sprintf( __( 'Found context %d for contextlevel %d with instance ID %d and depth %d', 'tvs-moodle-parent-provisioning' ), $context_id, $contextlevel, $instanceid, $depth ) );
+
 		$stmt->close();
 
 		return $context_id;
