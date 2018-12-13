@@ -388,7 +388,7 @@ class TVS_PMP_Ajax_Actions {
 		$email = str_replace( '{{parent_sname}}', $row->parent_sname, $email );
 		$email = str_replace( '{{parent_email}}', $row->parent_email, $email );
 
-		$pm = new PHPMailer();
+		$pm = new \PHPMailer\PHPMailer\PHPMailer();
 
 		$pm->isSMTP();
 		$pm->Host = get_option( 'tvs-moodle-parent-provisioning-smtp-server' );
