@@ -416,6 +416,9 @@ class TVS_PMP_MDL_DB_Helper {
 				$contact->load_mdl_user();
 				++$succeeded;
 				$success_parents .= sprintf( "%s", $contact ) . PHP_EOL;
+
+				$contact->status = 'partial';
+			       	$contact->save();
 			}
 			catch ( Exception $e ) {
 				++$failed;

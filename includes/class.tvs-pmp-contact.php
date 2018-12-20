@@ -124,6 +124,7 @@ class TVS_PMP_Contact {
 		'duplicate',
 		'bogus',
 		'unknown',
+		'partial',
 		'deleting' /* temporary status for deprovisioning when a row is being permanently deleted */
 	);
 

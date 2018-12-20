@@ -442,13 +442,19 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 					$record->approve_for_provisioning();
 
 					$helper = new TVS_PMP_MDL_DB_Helper( $this->logger, $this->dbc );
-					$this->logger->debug( __( 'Attempt now to provision all approved Contacts.', 'tvs-moodle-parent-provisioning' ) );
-					$helper->provision_all_approved();
-					// our only option is to provision all in 'approved' state -- this is what Moodle looks at
-					
-					// now make sure we have all Moodle user properties loaded into this Contact, status should now be 'provisioned'
-					$record->load_mdl_user();	
-					$this->logger->debug( sprintf( __( 'Loaded new Moodle user %d', 'tvs-moodle-parent-provisioning' ), $record->mdl_user_id ) );
+					$this->logger->debug( __( 'Attempt now to force deferred provision all approved Contacts.', 'tvs-moodle-parent-provisioning' ) );
+					update_option( 'tvs-moodle-parent-provisioning-force-provisioning-cycle', true );
+
+					// Contact is queued for provisioning. We must now wait for the provisioning cycle to be triggered via the CLI before
+					// the remainder of the process can complete.
+					return new WP_REST_Response(
+						array(
+							'affected_rows'  => $result,
+							'status'         => $record->status,
+							$record
+						),
+						207 /* multi-status, since we have partially completed */
+					);
 				}
 				catch ( TVS_PMP_Duplicate_Exception $dupl_exception ) {
 					$this->logger->error( $dupl_exception->getMessage() );
@@ -461,6 +467,24 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 				break;
 			}	
 		}
+
+		if ( 'partial' == $record->status ) {
+			try {
+				// now make sure we have all Moodle user properties loaded into this Contact, status should now be 'provisioned'
+				// TODO: once provisioned completely and user exists
+				$record->load_mdl_user();	
+				$this->logger->debug( sprintf( __( 'Loaded new Moodle user %d', 'tvs-moodle-parent-provisioning' ), $record->mdl_user_id ) );
+			}
+			catch ( TVS_PMP_Duplicate_Exception $dupl_exception ) {
+				$this->logger->error( $dupl_exception->getMessage() );
+				return $this->prepare_error( 'tvs_pmp_duplicate', $dupl_exception->getMessage(), $dupl_exception, 400 );
+			}
+			catch ( Exception $e ) {
+				$this->logger->error( $e->getMessage() );
+				return $this->prepare_error( 'tvs_pmp_exception_when_provisioning', __( 'Unable to complete the Provisioning process. Please check the application log file.', 'tvs-moodle-parent-provisioning' ), $e, 500 );
+			}
+		}
+	
 
 		if ( NULL !== $record->id ) {
 			try {
