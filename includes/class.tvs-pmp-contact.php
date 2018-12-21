@@ -124,7 +124,7 @@ class TVS_PMP_Contact {
 		'duplicate',
 		'bogus',
 		'unknown',
-		'partial',
+		'partial', /* deferred provisioning completed creating the Moodle account, but roles still to be assigned */
 		'deleting' /* temporary status for deprovisioning when a row is being permanently deleted */
 	);
 
