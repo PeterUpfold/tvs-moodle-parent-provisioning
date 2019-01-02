@@ -386,6 +386,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		}
 
 
+
 		if ( $request->get_param( 'mis_id' ) ) {
 			$record->mis_id = $request->get_param( 'mis_id' );
 		}
@@ -408,7 +409,32 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			$record->email = $request->get_param( 'email' );
 		}
 		if ( $request->get_param( 'status' ) ) {
-			$record->status = $request->get_param( 'status' );
+			// determine if the status change indicated in the request is something we will permit, and do it if so
+
+			$allow_status_change = false;
+
+			/* permitted status changes via this API:
+			 *
+			 * 'pending' => 'approved', 'rejected', 'duplicate', 'bogus' ##
+			 * 'approved' => 'rejected', 'duplicate', 'bogus'            ## Should trigger removals
+			 * 'provisioned' => 'rejected', 'duplicate', 'bogus'
+			 * 'partial'     => 'provisioned'
+	 		 */
+			
+			if ( $allow_status_change ) {
+				$this->logger->debug( sprintf( __( 'Status change to \'%s\' was permitted.', 'tvs-moodle-parent-provisioning' ), $request->get_param( 'status' ) ) );
+				$record->status = $request->get_param( 'status' );
+			}
+			else {
+				$status_change_message = sprintf(
+					__( 'Changing the status of %s from \'%s\' to \'%s\' is not a permitted status change through this API endpoint. This may be because some operations, such as deprovisioning and deleting, have their own API endpoints that ensure all dependent tasks are completed.', 'tvs-moodle-parent-provisioning' ),
+					$record->__toString(),
+					$record->status,
+					$request->get_param( 'status' )
+				);
+				$this->logger->error( $status_change_message );
+				return $this->prepare_error( 'tvs_pmp_invalid_status_change', $status_change_message, NULL, 400, NULL );
+			}
 		}
 		if ( $request->get_param( 'staff_comment' ) ) {
 			$record->staff_comment = $request->get_param( 'staff_comment' );
@@ -466,6 +492,18 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 				}
 				break;
 			}	
+		}
+
+		if ( 'approved' == $record->status ) {
+			// contact is not ready yet -- approved but not provisioned
+			return new WP_REST_Response(
+				array(
+					'affected_rows'   => $result,
+					'status'          => $record->status,
+					$record
+				),
+				207 /* multi-status -- partially completed */
+			);
 		}
 
 		if ( 'partial' == $record->status ) {
