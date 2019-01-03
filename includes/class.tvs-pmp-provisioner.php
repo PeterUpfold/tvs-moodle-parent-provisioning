@@ -753,7 +753,7 @@ class TVS_PMP_Provisioner {
 		
 		$this->logger->info( __( 'Begin provisioning cycle for all approved requests.', 'tvs-moodle-parent-provisioning' ) );
 
-		$requests = TVS_PMP_Request::load_all_approved();
+		$requests = TVS_PMP_Contact::load_all_approved();
 
 		if ( count( $requests ) < 1 ) {
 			$this->logger->info( __( 'No requests currently in the approved state. Ending this provisioning cycle.', 'tvs-moodle-parent-provisioning' ) );

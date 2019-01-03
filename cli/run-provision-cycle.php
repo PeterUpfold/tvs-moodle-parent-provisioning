@@ -21,26 +21,12 @@ if ( php_sapi_name() != 'cli' ) {
 
 require( dirname( __FILE__ ) . '/../../../../wp-load.php' );
 
-require_once( dirname( __FILE__ ) . '/../includes/class.tvs-pmp-request.php' );
-require_once( dirname( __FILE__ ) . '/../includes/class.tvs-pmp-provisioner.php' );
+require_once( dirname( __FILE__ ) . '/../includes/class.tvs-pmp-contact.php' );
+require_once( dirname( __FILE__ ) . '/../includes/class.tvs-pmp-mdl-db-helper.php' );
 
 
-$set_prefix = 'tvs-moodle-parent-provisioning-';
-$provisioner = new TVS_PMP_Provisioner(
-	get_option( $set_prefix . 'moodle-dbhost' ), 
-	get_option( $set_prefix . 'moodle-dbuser' ),
-	get_option( $set_prefix . 'moodle-dbpass' ),
-	get_option( $set_prefix . 'moodle-db' ),
-	get_option( $set_prefix . 'moodle-dbprefix' ),
-	get_option( $set_prefix . 'log-file-path' ),
-	get_option( $set_prefix . 'moodle-parent-role' ),
-	get_option( $set_prefix . 'moodle-modifier-id' ),
-	get_option( $set_prefix . 'moodle-sudo-account' ),
-	get_option( $set_prefix . 'php-path' ),
-	get_option( $set_prefix . 'moodle-url' ),
-	get_option( $set_prefix . 'moodle-path' )
-);
+$logger = TVS_PMP_MDL_DB_Helper::create_logger( $local_log_stream );
 
-
-$provisioner->provision_all_approved();
+$helper = new TVS_PMP_MDL_DB_Helper( $logger, TVS_PMP_MDL_DB_Helper::create_dbc( $logger ) );
+$helper->provision_all_approved();
 

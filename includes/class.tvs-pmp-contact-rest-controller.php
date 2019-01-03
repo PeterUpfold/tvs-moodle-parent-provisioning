@@ -136,7 +136,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			(
 			/* GET /contact  ("get all contacts") */
 /*
-				array(
+			array(
 					'methods'                            => WP_REST_Server::READABLE,
 					'callback'                           => array( $this, 'get_items' ),
 					'permission_callback'                => array( $this, 'user_has_permission' ),
@@ -152,35 +152,23 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		array(
 
 			/* GET /contact/[id]      ("get contact") */
-			array(
 				'methods'                            => WP_REST_Server::READABLE,
 				'callback'                           => array( $this, 'get_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
-				'args' => array(
-					'id' => array(
-						'description'                => __( 'Unique identifier for the object.' ),
-						'type'                       => 'integer',
-					),
-				) 
-			),
 
 		),
 		/* POST /contact/[id]     ("update specific contact") */
 		array(
-		       	array(
 				'methods'                            => WP_REST_Server::EDITABLE,
 				'callback'                           => array( $this, 'ensure_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' ),
 				'args'                               => array( $this, 'ensure_args' )
-			)
 		),
 			/* DELETE /contact/[id]   ("delete contact") */
 		array (
-	       		array(
 				'methods'                            => WP_REST_Server::DELETABLE,
 				'callback'                           => array( $this, 'delete_item' ),
 				'permission_callback'                => array( $this, 'user_has_permission' )
-			)
 		)
 		) );
 
@@ -417,15 +405,37 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			 *
 			 * 'pending' => 'approved', 'rejected', 'duplicate', 'bogus' ##
 			 * 'approved' => 'rejected', 'duplicate', 'bogus'            ## Should trigger removals
-			 * 'provisioned' => 'rejected', 'duplicate', 'bogus'
+			 * // NOT FOR NOW -- let's look at deprovision/delete to handle this 'provisioned' => 'rejected', 'duplicate', 'bogus'
 			 * 'partial'     => 'provisioned'
 	 		 */
+
+			switch ( $record->status ) {
+				case 'pending':
+					if ( in_array( $request->get_param( 'status' ), array( 'approved', 'rejected', 'duplicate', 'bogus' ) ) ) {
+						$allow_status_change = true;
+					}
+					break;
+
+				case 'approved':
+					if ( in_array( $request->get_param( 'status' ), array( 'rejected', 'duplicate', 'bogus' ) ) ) {
+						$allow_status_change = true;
+					}	
+					break;
+				/* NOT FOR NOW -- let's use deprovision/delete to handle these cases
+				 * case 'provisioned':
+					if ( in_array( $request->get_param( 'status', 
+						break;
+				 */
+				case 'partial':
+					$allow_status_change = ( 'provisioned' == $request->get_param( 'status' ) ) ? true : false;
+					break;
+			}
 			
 			if ( $allow_status_change ) {
-				$this->logger->debug( sprintf( __( 'Status change to \'%s\' was permitted.', 'tvs-moodle-parent-provisioning' ), $request->get_param( 'status' ) ) );
+				$this->logger->debug( sprintf( __( 'Status change from \'%s\' to \'%s\' was permitted.', 'tvs-moodle-parent-provisioning' ), $record->status, $request->get_param( 'status' ) ) );
 				$record->status = $request->get_param( 'status' );
 			}
-			else {
+			else if ( $record->status != $request->get_param( 'status' ) ) { // attempted status change but not permitted
 				$status_change_message = sprintf(
 					__( 'Changing the status of %s from \'%s\' to \'%s\' is not a permitted status change through this API endpoint. This may be because some operations, such as deprovisioning and deleting, have their own API endpoints that ensure all dependent tasks are completed.', 'tvs-moodle-parent-provisioning' ),
 					$record->__toString(),
@@ -454,8 +464,8 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		$result = $record->save();
 
-		/* all Contacts are created with the status 'pending'. To now set a different status, such as 'approved', we
-		 * will update the object.
+		/* all Contacts are created with the status 'pending' (if this is a new object).
+		 * To now set a different status, such as 'approved', we will update the object.
 		 */
 		if ( 'pending' == $record->status && 'pending' != $request->get_param( 'status' ) ) {
 			switch( $request->get_param( 'status' ) ) {
@@ -500,13 +510,13 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 				array(
 					'affected_rows'   => $result,
 					'status'          => $record->status,
-					$record
+					'record'          => $record
 				),
 				207 /* multi-status -- partially completed */
 			);
 		}
 
-		if ( 'partial' == $record->status ) {
+		if ( 'partial' == $record->status && 'provisioned' == $request->get_param( 'status' ) ) {
 			try {
 				// now make sure we have all Moodle user properties loaded into this Contact, status should now be 'provisioned'
 				// TODO: once provisioned completely and user exists
@@ -541,7 +551,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		return new WP_REST_Response(
 			array(
 				'affected_rows'  => $result,
-				$record
+				'record'         => $record
 			)
 		);
 
@@ -588,7 +598,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 *
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function get_item( WP_REST_Request $request ) {
+	public function get_item( $request ) {
 		//TODO verify that permissions checks do not need to be added here
 		//
 
@@ -611,7 +621,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 *
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function get_item_mappings( WP_REST_Request $request ) {
+	public function get_item_mappings( $request ) {
 		//TODO verify that permissions checks do not need to be added here
 
 		$this->ensure_logger_and_dbc();
@@ -634,7 +644,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 *
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function get_items( WP_REST_Request $request ) {
+	public function get_items( $request ) {
 		//TODO verify that permissions checks do not need to be added here
 		//
 
@@ -670,7 +680,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 *
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function delete_item( WP_REST_Request $request ) {
+	public function delete_item( $request ) {
 		//TODO verify that permissions checks do not need to be added here
 		//
 		

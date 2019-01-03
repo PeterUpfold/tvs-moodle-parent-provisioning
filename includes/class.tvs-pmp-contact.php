@@ -176,6 +176,7 @@ class TVS_PMP_Contact {
 			throw new InvalidArgumentException( __( 'You must pass an instance of a mysqli object that can fetch the information from Moodle.', 'tvs-moodle-parent-provisioning' ) );
 		}
 		$this->dbc = $dbc;
+		$this->status = 'pending'; // this is for new objects. Any call to a load...() will overwrite this property with the saved status
 	}
 
 	/**
