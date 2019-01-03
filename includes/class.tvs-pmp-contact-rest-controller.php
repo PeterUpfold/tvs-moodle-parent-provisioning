@@ -172,6 +172,31 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		)
 		) );
 
+		/* GET /contact/(?P<external_mis_id>[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}) */
+		register_rest_route( $this->namespace, '/contact/(?P<external_mis_id>[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12})', array(
+			array(
+
+				/* GET /contact/[id]      ("get contact") */
+					'methods'                            => WP_REST_Server::READABLE,
+					'callback'                           => array( $this, 'get_item' ),
+					'permission_callback'                => array( $this, 'user_has_permission' ),
+
+			),
+			/* POST /contact/[id]     ("update specific contact") */
+			array(
+					'methods'                            => WP_REST_Server::EDITABLE,
+					'callback'                           => array( $this, 'ensure_item' ),
+					'permission_callback'                => array( $this, 'user_has_permission' ),
+					'args'                               => array( $this, 'ensure_args' )
+			),
+				/* DELETE /contact/[id]   ("delete contact") */
+			array (
+					'methods'                            => WP_REST_Server::DELETABLE,
+					'callback'                           => array( $this, 'delete_item' ),
+					'permission_callback'                => array( $this, 'user_has_permission' )
+			)
+		) );
+
 		register_rest_route( $this->namespace, '/contact/(?P<id>[\d]+)/mappings', array(
 
 			/* GET /contact/[id]/mappings/ ("get all Contact's mappings") */
@@ -329,7 +354,8 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		$record = new TVS_PMP_Contact( $this->logger, $this->dbc ); // we will 'load' this momentarily to see if it exists
 
 		if ( NULL != $id ) {
-			$record->id = $id;
+			$record->id = intval( $id );
+			$this->logger->debug( sprintf( __( 'Try to get Contact with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
 			if ( ! $record->load( 'id' ) ) {
 				$this->logger->warn( sprintf( __( 'Unable to load Contact with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
 				$record = NULL;	
