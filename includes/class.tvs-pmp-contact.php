@@ -283,6 +283,22 @@ class TVS_PMP_Contact {
 		}
 		catch ( Exception $e ) {
 			$this->logger->debug( sprintf( __( 'Failed to load Moodle user for %s. This is normal if the Moodle user has not yet been provisioned. %s', 'tvs-moodle-parent-provisioning' ), $this, $e->getMessage() ) );
+
+			/* if we were unable to load the user, but they are apparently 'provisioned',
+			 * they clearly are no longer provisioned and we will update the status to
+			 * 'approved' which should cause provisioning to happen again. Eventual Consistency!
+			 */
+			if ( 'provisioned' == $this->status || 'partial' == $this->status ) {
+				$this->logger->warning( sprintf(
+					__( 'The Moodle user for %s could not be loaded, but the recorded status in our database is \'%s\'. This is inconsistent, so we will attempt to approve for provisioning again.', 'tvs-moodle-parent-provisioning' ),
+					$this, $this->status
+				) );
+				$this->status = 'pending';
+				$this->append_system_comment( sprintf( __('Could not load Moodle user for %s, but the recorded status was \'%s\'', 'tvs-moodle-parent-provisioning' ) ) );
+				$this->save();
+				$this->approve_for_provisioning();
+			}
+
 		}
 
 		$this->logger->debug( sprintf( __( 'Loaded record for %s', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
