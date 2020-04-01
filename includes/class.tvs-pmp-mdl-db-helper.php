@@ -345,6 +345,7 @@ class TVS_PMP_MDL_DB_Helper {
 		}
 		
 		
+		//TODO sudo path needs to be selectable from an option
 		$command = 'sudo -u ' .
 			escapeshellarg( $this->sudo_account ) .
 			' ' .
