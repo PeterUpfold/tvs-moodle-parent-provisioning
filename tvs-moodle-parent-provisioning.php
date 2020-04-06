@@ -334,6 +334,7 @@ class TVS_Parent_Moodle_Provisioning {
 					'moodle-db',
 					'moodle-dbhost',
 					'moodle-dbprefix',
+					'moodle-sudo-path',
 					'moodle-sudo-account',
 					'php-path',
 					'moodle-modifier-id',

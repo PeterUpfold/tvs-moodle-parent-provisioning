@@ -88,6 +88,14 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) || !defined( 'T
 	</td>
 </tr>
 <tr>
+	<th scope="row"><?php _e( 'Path to Sudo Executable', 'tvs-moodle-parent-provisioning' ); ?></th>
+	<td>
+		<input class="regular-text" name="moodle-sudo-path" id="moodle-sudo-path" type="text" value="<?php echo esc_attr( get_option( 'tvs-moodle-parent-provisioning-moodle-sudo-path' ) ) ; ?>" />
+		<p class="description"><?php _e( 'The path to the <code>sudo</code> executable. <code>sudo</code> is used to invoke various Moodle scheduled tasks as the Moodle Unix user account. On Linux, usually <code>/usr/bin/sudo</code>.', 'tvs-moodle-parent-provisioning' ); ?></p>
+	</td>
+
+</tr>
+<tr>
 	<th scope="row"><?php _e( 'Sudo User Account', 'tvs-moodle-parent-provisioning' ); ?></th>
 	<td>
 		<input class="regular-text" name="moodle-sudo-account" id="moodle-sudo-account" type="text" value="<?php echo esc_attr( get_option( 'tvs-moodle-parent-provisioning-moodle-sudo-account' ) ) ; ?>" />

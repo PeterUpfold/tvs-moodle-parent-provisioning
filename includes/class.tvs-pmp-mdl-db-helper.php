@@ -76,6 +76,11 @@ class TVS_PMP_MDL_DB_Helper {
 	 */
 	protected $dbprefix = 'mdl_';
 
+	/**
+	 * The file path to the sudo executable. Usually /usr/bin/sudo.
+	 */
+	protected $sudo_path = '';
+
 	/** 
 	 * The Unix user account to use for invoking various Moodle scheduled tasks to trigger the creation of 
 	 * new user accounts.
@@ -140,6 +145,7 @@ class TVS_PMP_MDL_DB_Helper {
 
 		$this->parent_role_id = get_option( $set_prefix . 'moodle-parent-role' );
 		$this->modifier_id = get_option( $set_prefix . 'moodle-modifier-id' );
+		$this->sudo_path = get_option( $set_prefix . 'moodle-sudo-path' );
 		$this->sudo_account = get_option( $set_prefix . 'moodle-sudo-account' );
 		$this->php_path = get_option( $set_prefix . 'php-path' );
 		$this->moodle_baseurl = get_option( $set_prefix . 'moodle-url' );
@@ -326,6 +332,8 @@ class TVS_PMP_MDL_DB_Helper {
 
 		// if any argument is suspect, refuse to run
 		if (
+			NULL == $this->sudo_path ||
+			empty( $this->sudo_path ) ||
 			NULL == $this->sudo_account ||
 			empty( $this->sudo_account ) ||
 			NULL == $this->php_path ||
@@ -345,8 +353,7 @@ class TVS_PMP_MDL_DB_Helper {
 		}
 		
 		
-		//TODO sudo path needs to be selectable from an option
-		$command = 'sudo -u ' .
+		$command = escapeshellarg( $this->sudo_path ) . ' -u ' .
 			escapeshellarg( $this->sudo_account ) .
 			' ' .
 			escapeshellarg( $this->php_path ) .
