@@ -339,7 +339,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 *
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function delete_item( WP_REST_Request $request ) {
+	public function delete_item( $request ) {
 		$this->ensure_logger_and_dbc();
 
 		$this->logger->debug( 'delete item ' );
@@ -382,7 +382,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 * @param WP_REST_Request $request Full details about the request.
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function get_item( WP_REST_Request $request ) {
+	public function get_item( $request ) {
 		$this->ensure_logger_and_dbc();
 
 		$record = $this->try_get_record_from_request( $request );
