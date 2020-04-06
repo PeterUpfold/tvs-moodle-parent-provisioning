@@ -632,7 +632,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		$record = $this->try_get_record_from_request( $request );
 
-		if ( ! $record->id ) {
+		if (!$record || ($record && property_exists( $record, 'id' ) && ! $record->id ) ) {
 			return new WP_Error( 'rest_post_invalid_id', __( 'The Contact was not found.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
 		}
 
