@@ -502,7 +502,7 @@ class TVS_PMP_Contact_Mapping {
 			return $role_assignment;
 		}
 		else {
-			$this->logger->info( sprintf( __( 'The Contact user %s already had the appropriate role %d assigned in the context %d for the target Contact Mapping user %s. Role assignment ID: %d', 'tvs-moodle-parent-provisioning' ), $this->contact, TVS_PMP_Contact_Mapping::$parent_role_id, $context, $this->__toString(), $role_assignment ) );
+			$this->logger->info( sprintf( __( 'The Contact user %s already had the appropriate role %d assigned in the context %d for the target Contact Mapping user %s. Role assignment ID: %d', 'tvs-moodle-parent-provisioning' ), $this->contact, TVS_PMP_Contact_Mapping::$target_role_id, $context, $this->__toString(), $role_assignment ) );
 			return $role_assignment;
 		}
 	}
@@ -544,7 +544,7 @@ class TVS_PMP_Contact_Mapping {
 			$this->role_assignment_id = NULL; // flush our cache of this value
 		}
 		else {
-			$this->logger->info( sprintf( __( 'The Contact user %s was missing the appropriate role %d assigned in the context %d for the target Contact Mapping user %s, so it could not be deleted. Role assignment ID: %d', 'tvs-moodle-parent-provisioning' ), $this->contact, TVS_PMP_Contact_Mapping::$parent_role_id, $context, $this->__toString(), $role_assignment ) );
+			$this->logger->info( sprintf( __( 'The Contact user %s was missing the appropriate role %d assigned in the context %d for the target Contact Mapping user %s, so it could not be deleted. Role assignment ID: %d', 'tvs-moodle-parent-provisioning' ), $this->contact, TVS_PMP_Contact_Mapping::$target_role_id, $context, $this->__toString(), $role_assignment ) );
 			return true;
 		}
 	}

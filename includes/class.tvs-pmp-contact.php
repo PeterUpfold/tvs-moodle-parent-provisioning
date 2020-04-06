@@ -881,15 +881,15 @@ class TVS_PMP_Contact {
 
 			}
 
-			// ensure the lazy-loaded parent_role_id is accessible from TVS_PMP_Contact_Mapping class
+			// ensure the lazy-loaded target_role_id is accessible from TVS_PMP_Contact_Mapping class
 			$blank_mapping = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc, $this );
 
 			// check for existing role assignment
-			$role_assignment = $this->mdl_user->get_role_assignment( TVS_PMP_Contact_Mapping::$parent_role_id, $context_id );
+			$role_assignment = $this->mdl_user->get_role_assignment( TVS_PMP_Contact_Mapping::$target_role_id, $context_id );
 
 			if ( ! $role_assignment ) {
 				$this->logger->info( sprintf( __( 'Will add role assignment for parent %d for context %d', 'tvs-moodle-parent-provisioning' ), $this->mdl_user->id, $context_id ) );
-				$this->mdl_user->add_role_assignment( TVS_PMP_Contact_Mapping::$parent_role_id, $context_id, TVS_PMP_Contact::modifier_id, '', 0, 0 ); 
+				$this->mdl_user->add_role_assignment( TVS_PMP_Contact_Mapping::$target_role_id, $context_id, TVS_PMP_Contact::$modifier_id, '', 0, 0 ); 
 			}
 			else {
 				$this->logger->info( sprintf( __( 'Parent with ID %d already had a role assignment for context %d', 'tvs-moodle-parent-provisioning' ), $parent_userid, $context_id ) );
