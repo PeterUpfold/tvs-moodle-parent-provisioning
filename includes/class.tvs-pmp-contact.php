@@ -774,7 +774,7 @@ class TVS_PMP_Contact {
 			}
 		}
 
-		$this->logger->warn( sprintf( __( 'Did not find a Contact Mapping to match Admissions Number (idnumber) %s', 'tvs-moodle-parent-provisioning' ), $adno ) );
+		$this->logger->warning( sprintf( __( 'Did not find a Contact Mapping to match Admissions Number (idnumber) %s', 'tvs-moodle-parent-provisioning' ), $adno ) );
 	}
 
 	/*

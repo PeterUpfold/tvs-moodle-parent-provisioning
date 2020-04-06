@@ -71,7 +71,6 @@ class TVS_PMP_mdl_user {
 	 * Construct the object
 	 */
 	public function __construct( $logger, $dbc ) {
-		$this->username = $username;
 		
 		if ( !( $dbc instanceof \mysqli ) ) {
 			throw new ArgumentException( __( 'You must pass an instance of a mysqli object that can fetch the information from Moodle.', 'tvs-moodle-parent-provisioning' ) );

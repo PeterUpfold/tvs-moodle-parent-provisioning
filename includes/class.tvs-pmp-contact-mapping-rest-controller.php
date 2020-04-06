@@ -236,7 +236,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 *
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function get_items( WP_REST_Request $request ) {
+	public function get_items( $request ) {
 		//TODO verify that permissions checks do not need to be added here
 		$this->ensure_logger_and_dbc();
 
@@ -283,7 +283,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			$this->logger->debug( sprintf( __( 'Determined that Contact Mapping \'%s\' exists within our database. Will check if it is actually mapped.', 'tvs-moodle-parent-provisioning' ), $mapping ) );
 
 			if ( ! $mapping->is_mapped() ) {
-				$this->logger->warn( sprintf( __( '\'%s\' was in the internal database, but not actually mapped within Moodle. This will be corrected.', 'tvs-moodle-parent-provisioning' ), $mapping ) );
+				$this->logger->warning( sprintf( __( '\'%s\' was in the internal database, but not actually mapped within Moodle. This will be corrected.', 'tvs-moodle-parent-provisioning' ), $mapping ) );
 				if ( ! $mapping->map() ) {
 					return new WP_Error(
 						sprintf( __( 'Failed to actually perform the mapping of \'%s\' in the Moodle database.', 'tvs-moodle-parent-provisioning' ), $mapping ),
@@ -463,7 +463,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 		if ( NULL != $id ) {
 			$record->id = $id;
 			if ( ! $record->load( 'id' ) ) {
-				$this->logger->warn( sprintf( __( 'Unable to load Contact Mapping with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
+				$this->logger->warning( sprintf( __( 'Unable to load Contact Mapping with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
 				$record = NULL;
 			}
 		}
@@ -473,7 +473,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			$record->contact_id = intval( $contact_id );
 			$record->adno = $adno;
 			if ( ! $record->load( 'contact_id_and_adno' ) ) {
-				$this->logger->warn( sprintf( __( 'Unable to load Contact Mapping with contact ID %d and Adno \'%s\'', 'tvs-moodle-parent-provisioning' ), $contact_id, $adno ) );
+				$this->logger->warning( sprintf( __( 'Unable to load Contact Mapping with contact ID %d and Adno \'%s\'', 'tvs-moodle-parent-provisioning' ), $contact_id, $adno ) );
 				$record = NULL;
 			}
 		}

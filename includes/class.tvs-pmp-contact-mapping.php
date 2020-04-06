@@ -323,7 +323,7 @@ class TVS_PMP_Contact_Mapping {
 			) );
 
 			if ( $result === false ) {
-				$this->logger->warn( __( 'Failed to run the insert query. WordPress returned (bool)false.', 'tvs-moodle-parent-provisioning' ) );
+				$this->logger->warning( __( 'Failed to run the insert query. WordPress returned (bool)false.', 'tvs-moodle-parent-provisioning' ) );
 				return false;
 			}
 
@@ -357,7 +357,7 @@ class TVS_PMP_Contact_Mapping {
 		);		
 
 		if ( $update_result === false ) {
-			$this->logger->warn( __( 'Failed to run the update query. WordPress returned (bool)false.', 'tvs-moodle-parent-provisioning' ) );
+			$this->logger->warning( __( 'Failed to run the update query. WordPress returned (bool)false.', 'tvs-moodle-parent-provisioning' ) );
 			return false;
 		}
 		return $this->id;
@@ -467,24 +467,24 @@ class TVS_PMP_Contact_Mapping {
 
 		if ( ! $this->contact instanceof TVS_PMP_Contact ) {
 			$message = sprintf( __( 'Unable to map %s, as the associated Contact had not been loaded properly.', 'tvs-moodle-parent-provisioning' ), $this->__toString() );
-			$this->logger->warn( $message );
+			$this->logger->warning( $message );
 			throw new InvalidArgumentException( $message );
 		}
 
 		if ( ! $this->contact->mdl_user instanceof TVS_PMP_mdl_user ) {
 			$message = sprintf( __( 'Unable to map %s, as the associated Contact %s has an invalid mdl_user object.', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
-			$this->logger->warn( $message );
+			$this->logger->warning( $message );
 			throw new InvalidArgumentException( $message );
 		}
 
 		if ( ! $this->contact->mdl_user->id ) {
 			$message = sprintf( __( 'Unable to map %s, as the associated Contact %s has an invalid mdl_user ID.', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
-			$this->logger->warn( $message );
+			$this->logger->warning( $message );
 			throw new InvalidArgumentException( $message );
 		}
 		if ( ! $this->mdl_user->id ) {
 			$message = sprintf_( __( 'Unable to map %s, as the target Moodle user has an invalid mdl_user ID. Has it been successfully loaded?', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->mdl_user->__toString() );
-			$this->logger->warn( $message );
+			$this->logger->warning( $message );
 			throw new InvalidArgumentException( $message );
 		}
 
@@ -524,7 +524,7 @@ class TVS_PMP_Contact_Mapping {
 		
 		if ( ! $this->contact->mdl_user->id ) {
 			$message = sprintf_( __( 'Unable to unmap %s, as the associated Contact %s has an invalid mdl_user ID.', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
-			$this->logger->warn( $message );
+			$this->logger->warning( $message );
 			throw new InvalidArgumentException( $message );
 		}
 
@@ -533,7 +533,7 @@ class TVS_PMP_Contact_Mapping {
 
 		if ( ! $context ) {
 			$message = sprintf( __( 'Unable to unmap %s, as unable to get a Moodle context for Moodle user %d', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->contact->__toString() );
-			$this->logger->warn( $message );
+			$this->logger->warning( $message );
 			throw new InvalidArgumentException( $message );
 		}
 

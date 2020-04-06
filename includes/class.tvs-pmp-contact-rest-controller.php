@@ -357,14 +357,14 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			$record->id = intval( $id );
 			$this->logger->debug( sprintf( __( 'Try to get Contact with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
 			if ( ! $record->load( 'id' ) ) {
-				$this->logger->warn( sprintf( __( 'Unable to load Contact with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
+				$this->logger->warning( sprintf( __( 'Unable to load Contact with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
 				$record = NULL;	
 			}
 		}
 		else if ( NULL != $external_mis_id ) {
 			$record->external_mis_id = $external_mis_id;
 			if ( ! $record->load( 'external_mis_id' ) ) {
-				$this->logger->warn( sprintf( __( 'Unable to load Contact with external MIS ID %s', 'tvs-moodle-parent-provisioning' ), $external_mis_id ) );
+				$this->logger->warning( sprintf( __( 'Unable to load Contact with external MIS ID %s', 'tvs-moodle-parent-provisioning' ), $external_mis_id ) );
 				$record = NULL;	
 			}
 		}
@@ -569,7 +569,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			}
 		}
 		else {
-			$this->logger->warn( sprintf( __( 'Cannot ensure role in static contexts for %s as the ID was not set after saving the Contact.', 'tvs-moodle-parent-provisioning' ), $record ) );
+			$this->logger->warning( sprintf( __( 'Cannot ensure role in static contexts for %s as the ID was not set after saving the Contact.', 'tvs-moodle-parent-provisioning' ), $record ) );
 		}
 
 		$this->logger->debug( sprintf( __( 'Result of saving record for %d was %d affected rows.', 'tvs-moodle-parent-provisioning' ), $record->id, $result ) );
