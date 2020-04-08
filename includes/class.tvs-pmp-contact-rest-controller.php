@@ -390,6 +390,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		//
 
 		$this->ensure_logger_and_dbc();
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
 
 		$record = $this->try_get_record_from_request( $request );
 
@@ -629,6 +630,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		//
 
 		$this->ensure_logger_and_dbc();
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
 
 		$record = $this->try_get_record_from_request( $request );
 
@@ -675,6 +677,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		//
 
 		$this->ensure_logger_and_dbc();
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
 
 		$records = TVS_PMP_Contact::load_all( $request->get_param( 'status' ), $this->logger, $this->dbc );	
 
@@ -711,6 +714,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		//
 		
 		$this->ensure_logger_and_dbc();
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
 
 		$record = $this->try_get_record_from_request( $request );
 

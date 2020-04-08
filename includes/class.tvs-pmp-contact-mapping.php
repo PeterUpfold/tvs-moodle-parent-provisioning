@@ -331,8 +331,9 @@ class TVS_PMP_Contact_Mapping {
 			return $this->id;
 		}
 
+
 		// update
-		$update_result = $wpdb->update( $wpdb->prefix . $table_name, array(
+		$update_result = $wpdb->update( $wpdb->prefix . $table_name, array( /* data */
 			'contact_id'                         => $this->contact_id,
 			'mis_id'                             => $this->mis_id,
 			'external_mis_id'                    => $this->external_mis_id,
@@ -341,7 +342,10 @@ class TVS_PMP_Contact_Mapping {
 			'username'                           => $this->username,
 			'date_synced'                        => $this->date_synced
 		),
-		array(
+		array( /* where */
+			'id'                                 => $this->id,
+		),
+		array( /* data format */
 			'%d',
 			'%s',
 			'%s',
@@ -349,9 +353,8 @@ class TVS_PMP_Contact_Mapping {
 			'%s',
 			'%s',
 			'%s'
-		), array(
-			'id'                                 => $this->id,
-		), array(
+		),
+	       	array( /* where format */
 			'%d'
 		)
 		);		

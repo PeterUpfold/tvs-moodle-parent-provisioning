@@ -240,6 +240,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 		//TODO verify that permissions checks do not need to be added here
 		$this->ensure_logger_and_dbc();
 
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
+
 		$records = TVS_PMP_Contact_Mapping::load_all( $this->logger, $this->dbc );	
 
 		return rest_ensure_response( $records );
@@ -261,6 +263,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 		//	
 	
 		$this->ensure_logger_and_dbc();
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
 
 		// look up the contact with the passed contact_id
 		$contact = new TVS_PMP_Contact( $this->logger, $this->dbc );
@@ -342,7 +345,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	public function delete_item( $request ) {
 		$this->ensure_logger_and_dbc();
 
-		$this->logger->debug( 'delete item ' );
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
 
 
 		/* explicitly do not use Moodle user ID -- we are looking for the Contact, not the target
@@ -384,6 +387,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 */
 	public function get_item( $request ) {
 		$this->ensure_logger_and_dbc();
+
+		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
 
 		$record = $this->try_get_record_from_request( $request );
 		if ( ! $record || ! $record->id ) {

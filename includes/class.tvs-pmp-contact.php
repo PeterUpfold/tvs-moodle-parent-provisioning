@@ -325,7 +325,8 @@ class TVS_PMP_Contact {
 		if ( ! $this->mdl_user->load( 'username' ) ) {
 			throw new InvalidArgumentException( sprintf( __( 'Unable to load Moodle user with username \'%s\'', 'tvs-moodle-parent-provisioning' ), $this->email ) );
 		}
-		$this->logger->debug( sprintf( __( 'Loaded Moodle user %s', 'tvs-moodle-parent-provisioning' ), $this->mdl_user ) );
+		$this->mdl_user_id = $this->mdl_user->id;
+		$this->logger->debug( sprintf( __( 'Loaded Moodle user %s with ID %d', 'tvs-moodle-parent-provisioning' ), $this->mdl_user, $this->mdl_user_id ) );
 	}
 
 	/**
@@ -442,11 +443,18 @@ class TVS_PMP_Contact {
 		}
 		else {
 			$this->logger->debug( sprintf( __( 'ID was set, so updating %s.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+
+			if ( !$this->mdl_user_id ) {
+				$this->logger->warning( sprintf( __( 'No mdl_user_id was available at the time of saving %s. Will try to load this information.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+				$this->load_mdl_user();
+			}
+
 			$affected_rows = $wpdb->update(
 				( $wpdb->prefix . TVS_PMP_Contact::$table_name ),
 				array(
 					'mis_id'          => intval( $this->mis_id ),
 					'external_mis_id' => stripslashes( $this->external_mis_id ),
+					'mdl_user_id'     => intval( $this->mdl_user_id ),
 					'title'           => stripslashes( $this->title ),
 					'forename'        => stripslashes( $this->forename ),
 					'surname'         => stripslashes( $this->surname ),
@@ -463,6 +471,7 @@ class TVS_PMP_Contact {
 				array(
 					'%d',               // mis_id
 					'%s',               // external_mis_id
+					'%d',               // mdl_user_id
 					'%s',               // title
 					'%s',               // forename
 					'%s',               // surname
