@@ -642,7 +642,7 @@ class TVS_PMP_Contact {
 
                 $response = $wpdb->delete( $wpdb->prefix . 'tvs_parent_moodle_provisioning_auth',
                         array(
-				'request_id'      =>  $id,
+				'request_id'      =>  $this->id,
                         ),
                         array(
                                 '%d',
@@ -697,6 +697,7 @@ class TVS_PMP_Contact {
 			$this->logger->debug( sprintf( __( 'Return %d cached Contact Mappings', 'tvs-moodle-parent-provisioning' ), count( $this->contact_mappings ) ) );
 			return $this->contact_mappings;
 		}
+		$this->contact_mappings = [];
 
 		$table_name = TVS_PMP_Contact_Mapping::$table_name;
 		$query = $wpdb->prepare(
@@ -835,11 +836,13 @@ class TVS_PMP_Contact {
 	 */
 	public function is_provisioned_and_enabled() {
 		if ( $this->does_mdl_user_exist() && 1 != $this->mdl_user->suspended )	 {
+			$this->logger->debug( sprintf( __( 'Moodle user for %s exists and is not suspended.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 			return true;
 		}
 		// or if in any non-de-provisioned status
 		
-		if ( 'approved' == $this->$status || 'provisioned' == $this->status ) {
+		if ( 'approved' == $this->status || 'provisioned' == $this->status ) {
+			$this->logger->debug( sprintf( __( 'Status of %s is %s', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $this->status ) );
 			return true;
 		}
 
@@ -919,8 +922,11 @@ class TVS_PMP_Contact {
 	 * Please call unset_timezone_for_wp() when done.
 	 */
 	protected function set_timezone_for_wp( &$before_tz ) {
-		$before_tz = @date_default_timezone_get();
-		date_default_timezone_set( get_option( 'timezone_string' ) );
+		$before_tz = @date_default_timezone_get(); 
+		$wp_tz = get_option( 'timezone_string' );
+		if ( strlen( $wp_tz ) > 0 ) {
+			date_default_timezone_set( $wp_tz );
+		}
 	}
 
 	/*
