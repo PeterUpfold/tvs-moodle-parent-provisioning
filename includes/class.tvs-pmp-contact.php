@@ -154,6 +154,12 @@ class TVS_PMP_Contact {
 	protected $dbc = NULL;
 
 	/**
+	 * Instance of TVS_PMP_MDL_DB_Helper class to fetch information from Moodle database.
+	 */
+	protected $mdl_db_helper = NULL;
+
+
+	/**
 	 * The TVS_PMP_mdl_user object that represents the Moodle user associated with this Contact.
 	 */
 	public $mdl_user = NULL;
@@ -808,6 +814,19 @@ class TVS_PMP_Contact {
 			throw new LogicException( sprintf( __( 'Cannot delete a Contact \'%s\' when Contact Mappings still exist for it.',  'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 		}
 
+		// check provisioning status and force a sync
+		if ( $this->is_provisioned_and_enabled() ) {
+			$exit_code = NULL;	
+			$this->get_mdl_db_helper()->run_moodle_scheduled_task( '\auth_db\task\sync_users', $exit_code );
+
+			if ( $exit_code != 0 ) {
+				$this->logger->warning( sprintf( __( 'The database sync task to ensure the user was suspended returned with exit code %d.', 'tvs-moodle-parent-provisioning' ), $exit_code ) );
+			}
+		}
+
+		// reload mdl user for status
+		$this->load_mdl_user();
+
 		// refuse to operate if still provisioned
 		if ( $this->is_provisioned_and_enabled() ) {
 			throw new LogicException( sprintf( __( 'Cannot delete a Contact \'%s\' as the user is still provisioned and enabled within Moodle, or because the status of the Contact within this database is considered approved or provisioned.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
@@ -960,6 +979,18 @@ class TVS_PMP_Contact {
 	public static function update_pending_count() {
 		set_transient( 'tvs-moodle-parent-provisioning-pending-requests', TVS_PMP_Contact::get_pending_count(), 3600 );
 	}
+
+	/**
+	 * Lazily load a TVS_PMP_MDL_DB_Helper instance as soon as we need one.
+	 */
+	protected function get_mdl_db_helper() {
+		if ( $this->mdl_db_helper instanceof TVS_PMP_MDL_DB_Helper ) {
+			return $this->mdl_db_helper;
+		}
+		$this->mdl_db_helper = new TVS_PMP_MDL_DB_Helper( $this->logger, $this->dbc );
+		return $this->mdl_db_helper;
+	}
+
 
 	/**
 	 * Return a string representation of the object.
