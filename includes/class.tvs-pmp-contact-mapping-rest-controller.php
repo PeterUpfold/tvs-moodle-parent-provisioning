@@ -424,7 +424,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 		// determine if we have a unique ID to look up
 		$id = $request->get_param( 'id' );
 
-		$this->logger->debug( print_r( $ignore_params, TRUE ) );
+		//$this->logger->debug( print_r( $ignore_params, TRUE ) );
 
 		if ( ! in_array( 'contact_id', $ignore_params ) ) {
 			$contact_id = $request->get_param( 'contact_id' );
@@ -433,11 +433,11 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			$mdl_user_id = $request->get_param( 'mdl_user_id' );
 		}
 
-		$this->logger->debug( print_r( $request->get_params(), TRUE ) );
+		/*$this->logger->debug( print_r( $request->get_params(), TRUE ) );
 		$this->logger->debug( $contact_id );
 		$this->logger->debug( 'mdl_user_id: ' . $mdl_user_id );
 
-		$this->logger->debug( 'Running try_get_record_from_request' );
+		$this->logger->debug( 'Running try_get_record_from_request' );*/
 
 		if ( isset( $mdl_user_id ) && $mdl_user_id > 0 ) {
 			// look up Contact ID from Moodle user
@@ -465,8 +465,10 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 
 		$record = new TVS_PMP_Contact_Mapping( $this->logger, $this->dbc, $contact ); // we will 'load' to see if it exists
 
+		//$this->logger->debug( 'id of record ' . $id );
+
 		if ( NULL != $id ) {
-			$record->id = $id;
+			$record->id = intval( $id );
 			if ( ! $record->load( 'id' ) ) {
 				$this->logger->warning( sprintf( __( 'Unable to load Contact Mapping with internal ID %d', 'tvs-moodle-parent-provisioning' ), $id ) );
 				$record = NULL;
