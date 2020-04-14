@@ -735,6 +735,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 
 			$record->deprovision( 'deleting' );
+
 			$record->delete();
 		}
 	}

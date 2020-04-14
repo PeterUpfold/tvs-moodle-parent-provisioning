@@ -186,6 +186,10 @@ class TVS_PMP_MDL_DB_Helper {
 			$logger->pushHandler( new BrowserConsoleHandler() );
 		}
 
+		if ( php_sapi_name() == 'cli' ) {
+			$logger->pushHandler( new StreamHandler( fopen( 'php://stderr', 'w' ) ), $log_level );
+		}
+
 		ErrorHandler::register( $logger );
 
 		return $logger;
@@ -504,7 +508,7 @@ class TVS_PMP_MDL_DB_Helper {
 		// get the handlers to find the local log stream to dump
 		if ( NULL === $this->local_log_stream ) {
 			foreach( $this->logger->getHandlers() as $handler ) {
-				if ( $handler instanceof \Monolog\Handler\StreamHandler && NULL === $handler->getUrl() && is_resource( $handler->getStream() ) ) {
+				if ( $handler instanceof \Monolog\Handler\StreamHandler && NULL === $handler->getUrl() && is_resource( $handler->getStream() ) && !stream_isatty( $handler->getStream() ) ) {
 					$this->local_log_stream = $handler->getStream();
 					break;
 				}
@@ -594,6 +598,15 @@ class TVS_PMP_MDL_DB_Helper {
 	
 		return $role_assignment_id;
 
+	}
+
+	/** 
+	 * Return the PHP path.
+	 *
+	 * @return string
+	 */
+	public function get_php_path() {
+		return $this->php_path;
 	}
 };
 
