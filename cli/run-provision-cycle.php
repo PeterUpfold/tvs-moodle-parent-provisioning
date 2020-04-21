@@ -30,3 +30,6 @@ $logger = TVS_PMP_MDL_DB_Helper::create_logger( $local_log_stream );
 $helper = new TVS_PMP_MDL_DB_Helper( $logger, TVS_PMP_MDL_DB_Helper::create_dbc( $logger ) );
 $helper->provision_all_approved();
 
+// find all 'deleting' status and if any exist, trigger the DB sync
+$helper->finish_delete();
+

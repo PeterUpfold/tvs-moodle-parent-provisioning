@@ -33,13 +33,13 @@ $helper->run_moodle_scheduled_task( '\auth_db\task\sync_users', $exit_code );
 $logger->info( sprintf( __( 'Completed auth_db\task\sync_users with exit code %d', 'tvs-moodle-parent-provisioning' ), $exit_code ) );
 
 if ( $exit_code !== 0 ) {
-	$logger->warn( sprintf( __( 'auth_db\task\sync_users exited with non-zero exit code %d', 'tvs-moodle-parent-provisioning' ), $exit_code ) );
+	$logger->warning( sprintf( __( 'auth_db\task\sync_users exited with non-zero exit code %d', 'tvs-moodle-parent-provisioning' ), $exit_code ) );
 }
 
 if ( is_int( $exit_code ) ) {
 	exit( $exit_code );
 }
 else {
-	$logger->warn( sprintf( __('Exit code %s was not an integer. Unable to determine task success.', 'tvs-moodle-parent-provisioning' ), $exit_code ) );
+	$logger->warning( sprintf( __('Exit code %s was not an integer. Unable to determine task success.', 'tvs-moodle-parent-provisioning' ), $exit_code ) );
 	exit( 254 );
 }

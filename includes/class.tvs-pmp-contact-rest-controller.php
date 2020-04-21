@@ -722,6 +722,9 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			return new WP_Error( 'rest_post_invalid_id', __( 'Unable to look up the Contact.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 404 ) );
 		}
 
+
+		$status = [];
+
 		if ( $record->does_mdl_user_exist() ) {
 			$mappings = $record->get_contact_mappings( true );
 			if ( is_array( $mappings ) && count( $mappings ) > 0 ) {
@@ -735,9 +738,24 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 
 			$record->deprovision( 'deleting' );
+			// we cannot delete yet -- we need the sync task to run via sudo which must occur in a CLI-initiated context
+			// instead we set the flag for provisioning
+			update_option( 'tvs-moodle-parent-provisioning-force-provisioning-cycle', true );
 
-			$record->delete();
+			$status['status'] = 'deleting';
+			$status['detail'] = 'waiting-for-provisioning-cycle';
+
 		}
+		else {
+			if ( $record->delete() ) {
+				$status['status'] = 'deleted';
+			}
+			else {
+				return new WP_Error( 'rest_post_invalid_id', __( 'Failed to complete the delete of a Contact without an existing Moodle user ID.', 'tvs-moodle-parent-provisioning' ), array( 'status' => 500 ) );
+			}
+		}
+
+		return rest_ensure_response( $status );
 	}
 
 

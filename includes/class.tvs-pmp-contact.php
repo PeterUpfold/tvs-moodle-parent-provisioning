@@ -814,19 +814,6 @@ class TVS_PMP_Contact {
 			throw new LogicException( sprintf( __( 'Cannot delete a Contact \'%s\' when Contact Mappings still exist for it.',  'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 		}
 
-		// note that you cannot invoke sudo from web context (not readable executable) so we must dispatch to a CLI context to achieve this
-		// check provisioning status and force a sync
-		if ( $this->is_provisioned_and_enabled() ) {
-			$output = NULL;
-			$exit_code = NULL;
-			exec( escapeshellarg( $this->get_mdl_db_helper()->get_php_path() ) . ' ' . 
-				escapeshellarg( __DIR__ . '/../cli/sync-db-users.php' ),
-				$output, $exit_code );
-			if ( $exit_code !== 0 ) {
-				$this->logger->warning( sprintf( __( 'Sync users failed with exit code %d.', 'tvs-moodle-parent-provisioning' ), $exit_cide ) );
-			}
-		}
-
 		// reload mdl user for status
 		$this->load_mdl_user();
 

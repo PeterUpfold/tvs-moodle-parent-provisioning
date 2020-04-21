@@ -385,6 +385,45 @@ class TVS_PMP_MDL_DB_Helper {
 		return $output;
 	}
 
+	/**
+	 * Complete the process of removing Contacts whose status is currently 'deleting'.
+	 *
+	 * @return void
+	 */
+	public function finish_delete() {
+		$this->logger->info( __( 'Begin finish delete cycle for all Contacts in \'deleting\' status.', 'tvs-moodle-parent-provisioning' ) );
+
+		$contacts = TVS_PMP_Contact::load_all( 'deleting', $this->logger, $this->dbc );
+		if ( count( $contacts ) < 1 ) {
+			$this->logger->info( __( 'No Contacts currently in the \'deleting\' status. Ending this finish delete cycle.', 'tvs-moodle-parent-provisioning' ) );
+			return;
+		}
+
+		$this->logger->info( sprintf( __( 'Found %d Contacts to finish deleting', 'tvs-moodle-parent-provisioning' ), count( $contacts ) ) );
+
+		$task = '\auth_db\task\sync_users';
+
+		$this->logger->info( sprintf( __( 'Running task %s to sync accounts in auth table with Moodle', 'tvs-moodle-parent-provisioning' ), $task ) );
+		$this->run_moodle_scheduled_task( $task, $exit_code );
+		$this->logger->info( sprintf( __( 'Task %s completed with exit code %d', 'tvs-moodle-parent-provisioning' ), $task, $exit_code ) );
+
+		if ( $exit_code != 0 ){
+			$this->logger->warning( sprintf( __( 'The Moodle scheduled task %s ended with exit code %d. This implies that the task did not complete successfully. Set the logging level to debugging on the \'Settings\' screen, re-run this process and review the log entries for the task.', 'tvs-moodle-parent-provisioning' ), $task, $exit_code ) );
+		}
+
+		// now that Moodle  users are suspended, let's delete the Contact entry
+		foreach( $contacts as $contact ) {
+			$affected = $contact->delete();	
+			if ( $affected ) {
+				$this->logger->info( sprintf( __( 'Deleted %d row -- removed %s.', 'tvs-moodle-parent-provisioning' ), $affected, $contact->__toString() ) );
+			}
+			else {
+				$this->logger->warning( sprintf( __( 'Failed to remove %s when performing the database delete.', 'tvs-moodle-parent-provisioning' ), $contact->__toString() ) );
+			}
+		}
+
+	}
+
 
 	/**
 	 * Find all approved requests and provision them.
