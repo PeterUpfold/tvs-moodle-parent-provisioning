@@ -309,8 +309,9 @@ class TVS_PMP_Contact {
 					__( 'The Moodle user for %s could not be loaded, but the recorded status in our database is \'%s\'. This is inconsistent, so we will attempt to approve for provisioning again.', 'tvs-moodle-parent-provisioning' ),
 					$this, $this->status
 				) );
+				$this->append_system_comment( sprintf( __('Could not load Moodle user for %s, but the recorded status was \'%s\'', 'tvs-moodle-parent-provisioning' ), $this->status ) );
+
 				$this->status = 'pending';
-				$this->append_system_comment( sprintf( __('Could not load Moodle user for %s, but the recorded status was \'%s\'', 'tvs-moodle-parent-provisioning' ) ) );
 				$this->save();
 				$this->approve_for_provisioning();
 			}
@@ -452,7 +453,14 @@ class TVS_PMP_Contact {
 
 			if ( !$this->mdl_user_id ) {
 				$this->logger->warning( sprintf( __( 'No mdl_user_id was available at the time of saving %s. Will try to load this information.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
-				$this->load_mdl_user();
+				
+				// it's possible our Contact entry exists but the Moodle user still is not provisioned (script not run?), so we must catch this
+				try {
+					$this->load_mdl_user();
+				}
+				catch ( Exception $e ) {
+					$this->logger->debug( sprintf( __( 'Failed to load Moodle user for %s. This is normal if the Moodle user has not yet been provisioned. %s', 'tvs-moodle-parent-provisioning' ), $this, $e->getMessage() ) );
+				}
 			}
 
 			$affected_rows = $wpdb->update(
@@ -979,6 +987,26 @@ class TVS_PMP_Contact {
 		}
 		$this->mdl_db_helper = new TVS_PMP_MDL_DB_Helper( $this->logger, $this->dbc );
 		return $this->mdl_db_helper;
+	}
+
+
+	/**
+	 * Update the email address and associated username of the Moodle user associated with
+	 * this Contact
+	 */
+	public function update_email_address( $new_email ) {
+		$this->load_mdl_user();
+
+		$rows = $this->mdl_user->set_email_address_and_username( $new_email );		
+
+		if ( $rows !== 1 ) {
+			throw new Exception( sprintf( __( 'Unexpected result from TVS_PMP_mdl_user::set_email_address_and_username. Affected rows was %d and should have been 1.', 'tvs-moodle-parent-provisioning' ), $rows ) );
+		}
+
+		// must reload the mdl_user to see the changes
+		$this->email = $new_email;
+		$this->load_mdl_user();
+		$this->save(); // save Contact record with the new email address
 	}
 
 

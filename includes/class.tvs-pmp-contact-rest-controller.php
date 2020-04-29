@@ -421,6 +421,29 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 			$record->surname = $request->get_param( 'surname' );
 		}
 		if ( $request->get_param( 'email' ) ) {
+			// if this is an email address change, we must follow a procedure to update the mdl_user
+			if ( !filter_var( $request->get_param( 'email' ), FILTER_VALIDATE_EMAIL ) ) {
+				return $this->prepare_error( 'tvs_pmp_email_failed_validation', sprintf(
+					__( 'The email address \'%s\' failed validation.', 'tvs-moodle-parent-provisioning' ),
+					$request->get_param( 'email' )
+				), NULL, 400 );
+			}
+			if ( strlen( $request->get_param( 'email' ) ) > 100 ) {
+				return $this->prepare( 'tvs_pmp_email_too_long', __( 'Moodle does not support email addresses greater than 100 characters in length.', 'tvs-moodle-parent-provisioning' ), NULL, 400 );
+			}
+
+			/* if current status is 'provisioned' or 'partial', a mdl_user exists and a change might need to be performed */
+			if ( 'partial' == $record->status || 'provisioned' == $record->status ) {
+				if ( $record->email !== strtolower( $request->get_param( 'email' ) ) ) {
+					try {
+						$record->update_email_address( strtolower( $request->get_param( 'email' ) ) );
+					}
+					catch ( Exception $e ) {
+						return $this->prepare_error( 'tvs_pmp_email_change_failed', __( 'The email address change failed.', 'tvs-moodle-parent-provisioning' ), $e, 500 );
+					}
+				}
+			}
+
 			$record->email = $request->get_param( 'email' );
 		}
 		if ( $request->get_param( 'status' ) ) {
@@ -566,7 +589,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 				$record->ensure_role_in_static_contexts();
 			}
 			catch ( Exception $e ) {
-				return $this->prepare_error( 'tvs_pmp_exception_when_ensuring_static_contexts', __( 'Unable to ensure the appropriate role assignmentswere set in the static contexts. Please check the application log file.', 'tvs-moodle-parent-provisioning' ), $e, 500 );
+				return $this->prepare_error( 'tvs_pmp_exception_when_ensuring_static_contexts', __( 'Unable to ensure the appropriate role assignments were set in the static contexts. Please check the application log file.', 'tvs-moodle-parent-provisioning' ), $e, 500 );
 			}
 		}
 		else {
@@ -603,6 +626,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && $exception instanceof Exception ) {
 			$error_data['exception'] = $exception->getMessage();
+			$error_data['stack_trace'] = $exception->getTrace();
 		}
 
 		$error_data['status'] = $status_code;

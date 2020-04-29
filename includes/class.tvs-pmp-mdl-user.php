@@ -363,6 +363,41 @@ class TVS_PMP_mdl_user {
 		return $rows;
 	}
 
+
+	/**
+	 * Set the email address and username of the target mdl_user.
+	 *
+	 * @param string $new_email The new email address
+	 *
+	 * @return int The number of affected rows.
+	 */
+	public function set_email_address_and_username( $new_email ) {
+		$this->logger->debug( sprintf( __( 'Update email address and username to \'%s\' (%s)', 'tvs-moodle-parent-provisioning' ), $new_email, $this->__toString() ) );
+
+		if ( ! $this->id ) {
+			throw new InvalidArgumentException( __( 'The mdl_user must be successfully loaded from the database before attempting to set the email address and username.', 'tvs-moodle-parent-provisioning' ) );
+		}
+
+		$stmt = $this->dbc->prepare( "UPDATE {$this->dbprefix}user SET username = ?, email = ? WHERE id = ?" );
+		if ( ! $stmt ) {
+			throw new Exception( sprintf( __( 'Failed to prepare the database statement to update email address. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );
+		}
+
+		$stmt->bind_param( 'ssi', $new_email, $new_email, $this->id );
+		$stmt->execute();
+
+		$this->logger->info( sprintf( __( 'Updated %s email address to \'%s\'. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $this->__toString(), $new_email, $stmt->affected_rows ) );
+		$rows = $stmt->affected_rows;
+
+		$stmt->close();
+
+		// update internal object. Other mdl_user derived objects may need reloading by callers to see new data
+		$this->username = $new_email;
+
+		return $rows;
+
+	}
+
 	/**
 	 * Return a string representation of the object.
 	 *

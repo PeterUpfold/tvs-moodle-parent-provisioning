@@ -639,6 +639,7 @@ class TVS_PMP_MDL_DB_Helper {
 
 	}
 
+
 	/** 
 	 * Return the PHP path.
 	 *
