@@ -237,7 +237,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function get_items( $request ) {
-		//TODO verify that permissions checks do not need to be added here
+		//permissions handled by WP REST API routes
 		$this->ensure_logger_and_dbc();
 
 		$this->logger->debug( sprintf( __( '=== New REST request: %s', 'tvs-moodle-parent-provisioning' ), __METHOD__ ) );
@@ -259,7 +259,7 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 */
 	public function ensure_item( WP_REST_Request $request ) {
 
-		//TODO verify that permissions checks do not need to be added here
+		//permissions handled by WP REST API routes
 		//	
 	
 		$this->ensure_logger_and_dbc();

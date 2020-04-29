@@ -386,7 +386,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function ensure_item( WP_REST_Request $request ) {
-		//TODO verify that permissions checks do not need to be added here
+		//permissions handled by WP REST API routes
 		//
 
 		$this->ensure_logger_and_dbc();
@@ -650,7 +650,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function get_item( $request ) {
-		//TODO verify that permissions checks do not need to be added here
+		//permissions handled by WP REST API routes
 		//
 
 		$this->ensure_logger_and_dbc();
@@ -674,7 +674,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function get_item_mappings( $request ) {
-		//TODO verify that permissions checks do not need to be added here
+		//permissions handled by WP REST API routes
 
 		$this->ensure_logger_and_dbc();
 
@@ -697,7 +697,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function get_items( $request ) {
-		//TODO verify that permissions checks do not need to be added here
+		//permissions handled by WP REST API routes
 		//
 
 		$this->ensure_logger_and_dbc();
@@ -734,7 +734,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function delete_item( $request ) {
-		//TODO verify that permissions checks do not need to be added here
+		//permissions handled by WP REST API routes
 		//
 		
 		$this->ensure_logger_and_dbc();
