@@ -190,6 +190,15 @@ class TVS_Parent_Moodle_Provisioning {
 
 		add_submenu_page(
 			'tvs_parent_moodle_provisioning',
+			__( 'Moodle Provisioning &mdash; Contacts', 'tvs-moodle-parent-provisioning' ),
+			__( 'Contacts', 'tvs-moodle-parent-provisioning' ),
+			TVS_PMP_REQUIRED_CAPABILITY,
+			'tvs_parent_moodle_provisioning_contacts_table',
+			[ $this, 'print_admin_page_contacts_table' ]
+		);
+
+		add_submenu_page(
+			'tvs_parent_moodle_provisioning',
 			__( 'Moodle Provisioning &mdash; Upload Users', 'tvs-moodle-parent-provisioning' ),
 			__( 'Upload Users', 'tvs-moodle-parent-provisioning' ),
 			TVS_PMP_REQUIRED_CAPABILITY,
@@ -399,6 +408,18 @@ class TVS_Parent_Moodle_Provisioning {
 			
 
 			require( dirname( __FILE__ ) . '/admin/auth-table.php' );
+		}
+	}
+
+	/**
+	 * Prints to output the admin page for showing the Contacts table.
+	 */
+	public function print_admin_page_contacts_table() {
+		if ( ! current_user_can( TVS_PMP_REQUIRED_CAPABILITY ) ) {
+			echo 'You are not permitted to access this page.';
+		}
+		else {
+			require( dirname( __FILE__ ) . '/admin/contacts.php' );
 		}
 	}
 

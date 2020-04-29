@@ -176,6 +176,28 @@ class TVS_PMP_Contact {
 	public static $modifier_id = 0;
 
 	/**
+	 * These fields are in the database table and are the only strings that can be interpolated
+	 * into the database query for ORDER BY
+	 */
+	protected static $valid_field_names = [
+		'id',
+		'mis_id',
+		'external_mis_id',
+		'mdl_user_id',
+		'title',
+		'forename',
+		'surname',
+		'email',
+		'status',
+		'staff_comment',
+		'system_comment',
+		'date_created',
+		'date_updated',
+		'date_approved',
+		'date_synced'
+	];
+
+	/**
 	 * Set up the object.
 	 *
 	 * @param \Monolog\Logger\Logger $logger An object used to log information 
@@ -368,20 +390,7 @@ class TVS_PMP_Contact {
 
 		foreach( $requests_raw as $row ) {
 			$request = new TVS_PMP_Contact( $logger, $dbc );
-			$request->id = (int) $row->id;
-			$request->mis_id = $row->mis_id;
-			$request->external_mis_id = $row->external_mis_id;
-			$request->title = $row->title;
-			$request->forename = $row->forename;
-			$request->surname = $row->surname;
-			$request->email = $row->email;
-			$request->status = $row->status;
-			$request->staff_comment = $row->staff_comment;
-			$request->system_comment = $row->system_comment;
-			$request->date_created = $row->date_created;
-			$request->date_updated = $row->date_updated;
-			$request->date_approved = $row->date_approved;
-			$request->date_synced = $row->date_synced;
+			$request->load_from_row( $row );
 			$request_objs[] = $request;
 			//$this->logger->debug( __( 'Fetched %s', 'tvs-moodle-parent-provisioning' ), $state );
 		}
@@ -389,6 +398,110 @@ class TVS_PMP_Contact {
 		//$this->logger->debug( sprintf( __( 'Fetched %d Contacts', 'tvs-moodle-parent-provisioning' ), count( $request_objs ) ) );
 		return $request_objs;
 
+	}
+
+	/**
+	 * Load all Contacts that match the specified $search, or if $search is an empty string,
+	 * load all Contacts. Supports manipulation of results in terms of $orderby, $order and
+	 * pagination with $offset and $limit.
+	 *
+	 * @param string $orderby The field name by which to order results.
+	 * @param string $order 'ASC' or 'DESC'
+	 * @param int $offset Number of items to skip past (for pagination)
+	 * @param int $limit Maximum number of items to return
+	 * @param \Monolog\Logger\Logger $logger An instance of \Monolog\Logger\Logger for logging purposes.
+	 * @param \mysqli $dbc A connection to the Moodle database.
+	 * @param string $search The search query. Searches across fields for name.
+	 *
+	 * @return array of TVS_PMP_Contact 
+	 *
+	 */
+	public static function load_by_query( $orderby, $order, $offset, $limit, $logger, $dbc, $search = '' ) {
+		global $wpdb;
+
+
+		if ( ! in_array( $orderby, TVS_PMP_Contact::$valid_field_names, true ) ) {
+			throw new InvalidArgumentException(
+				sprintf(
+					__( '$orderby must be one of the valid field names: %s', 'tvs-moodle-parent-provisioning' ),
+					implode(',', TVS_PMP_Contact::$valid_field_names )
+				)
+			);
+		}
+
+		$order = strtoupper( $order );
+		if ( ! in_array( $order, [ 'ASC', 'DESC' ], true ) ) {
+			throw new InvalidArgumentException( __( '$order must be ASC or DESC.', 'tvs-moodle-parent-provisioning' ) );
+		}
+
+		$offset = intval( $offset );
+		$limit = intval( $limit );
+
+		if ( $limit < 1 ) {
+			throw new InvalidArgumentException( __( '$limit must be an integer greater than or equal to 1.', 'tvs-moodle-parent-provisioning' ) );
+		}
+		if ( abs( $limit ) !== $limit || abs( $offset ) !== $offset ) {
+			throw new InvalidArgumentException( __( '$limit and $offset must be positive integers.', 'tvs-moodle-parent-provisioning' ) );
+		}
+
+
+		$prepared_query = NULL;
+		if ( strlen( $search ) < 1 ) {
+			// no search
+			$prepared_query = $wpdb->prepare(
+				'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
+				$offset, $limit
+			);
+		}
+		else {
+			// search query
+			$like = '%' . $wpdb->esc_like( $search ) . '%';
+			$prepared_query = $wpdb->prepare(
+				'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE forename LIKE %s OR surname LIKE %s ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
+				$like, $like, $offset, $limit
+			);
+		}
+
+		$request_objs = [];
+		$requests_raw = $wpdb->get_results( $prepared_query );
+
+		foreach( $requests_raw as $row ) {
+			$request = new TVS_PMP_Contact( $logger, $dbc );
+			$request->load_from_row( $row );
+			$request_objs[] = $request;
+		}
+
+		$logger->debug( sprintf( __( 'Fetched %d Contacts', 'tvs-moodle-parent-provisioning' ), count( $request_objs ) ) );
+		return $request_objs;
+	}
+
+
+	/**
+	 * Return a count of the total number of Contacts that match this search
+	 * query.
+	 *
+	 * @param string $search The search query. Searches across fields for name.
+	 *
+	 *
+	 * @return int The count of rows.
+	 */
+	public static function count_by_query( $search = '' ) {
+		global $wpdb;
+		$prepared_query = NULL;
+		if ( strlen( $search ) < 1 ) {
+			// no search -- no parameters to prepare
+			$prepared_query = 'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact';
+		}
+		else {
+			// search query
+			$like = '%' . $wpdb->esc_like( $search ) . '%';
+			$prepared_query = $wpdb->prepare(
+				'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE forename LIKE %s OR surname LIKE %s',
+				$like, $like
+			);
+		}
+
+		return $wpdb->get_var( $prepared_query );
 	}
 
 
