@@ -463,6 +463,8 @@ class TVS_PMP_Contact {
 				}
 			}
 
+			$this->date_synced = date( 'Y-m-d H:i:s' );
+
 			$affected_rows = $wpdb->update(
 				( $wpdb->prefix . TVS_PMP_Contact::$table_name ),
 				array(
@@ -568,7 +570,7 @@ class TVS_PMP_Contact {
                 // add to external Moodle auth table and wait there until the next cron-initiated provision cycle
                 $username = strtolower( $this->email );
                 $title = $this->title;
-                $forename = $this->title . ' ' . $this->forename;
+                $forename = $this->title . ' ' . $this->forename; //TODO make this configurable for GD
                 $surname = $this->surname;
                 $email = strtolower( $this->email );
                 $description = __( 'Parent Moodle Account', 'tvs-moodle-parent-provisioning' );
@@ -616,7 +618,7 @@ class TVS_PMP_Contact {
 
 		$this->system_comment = $new_sys_comment;
 
-		return $wpdb->update( 	$wpdb->prefix .'tvs_parent_moodle_provisioning',
+		return $wpdb->update( 	$wpdb->prefix .'tvs_parent_moodle_provisioning_contact',
 			array(
 				'system_comment'		=> $new_sys_comment,
 				'date_updated'			=> date('Y-m-d H:i:s')
@@ -995,7 +997,10 @@ class TVS_PMP_Contact {
 	 * this Contact
 	 */
 	public function update_email_address( $new_email ) {
+		global $wpdb;
 		$this->load_mdl_user();
+
+		$new_email = strtolower( $new_email );
 
 		$rows = $this->mdl_user->set_email_address_and_username( $new_email );		
 
@@ -1003,8 +1008,41 @@ class TVS_PMP_Contact {
 			throw new Exception( sprintf( __( 'Unexpected result from TVS_PMP_mdl_user::set_email_address_and_username. Affected rows was %d and should have been 1.', 'tvs-moodle-parent-provisioning' ), $rows ) );
 		}
 
+		// must update the auth table so that Moodle does not suspend the user
+		$rows = $wpdb->update( 
+			$wpdb->prefix . 'tvs_parent_moodle_provisioning_auth',
+			[ /* data */
+				'username'      => $new_email,
+				'parent_email'  => $new_email
+			],
+			[ /* where */
+				'request_id'    => $this->id
+			],
+			[ /* data_format */
+				'%s',
+				'%s'
+			],
+			[ /* where_format */
+				'%d'
+			]
+		);
+
+		if ( $rows !== 1 ) {
+
+			$this->logger->error( __( 'Rolling back mdl_user email address change since the auth table update failed.', 'tvs-moodle-parent-provisioning' ) );
+			// roll back the email address change
+			$this->mdl_user->set_email_address_and_username( $this->email );
+
+			throw new Exception( sprintf( __( 'Unexpected result from updating the auth table. Affected rows %d and should have been 1.', 'tvs-moodle-parent-provisioning' ), $rows ) );
+		}
+
+		$this->logger->info( sprintf( __( 'Updated auth table with new email address \'%s\' for %s. Affected rows: %d', 'tvs-moodle-parent-provisioning' ), $new_email, $this->__toString(), $rows ) );
+		$this->append_system_comment( sprintf( __( 'Updated email address and Moodle username from \'%s\' to \'%s\'. [%s]', 'tvs-moodle-parent-provisioning' ), $this->email, $new_email, date( 'Y-m-d H:i:s' ) ) );
+
 		// must reload the mdl_user to see the changes
 		$this->email = $new_email;
+
+
 		$this->load_mdl_user();
 		$this->save(); // save Contact record with the new email address
 	}

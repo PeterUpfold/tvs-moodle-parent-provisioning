@@ -502,6 +502,7 @@ class TVS_PMP_Contact_Mapping {
 		if ( ! $role_assignment ) {
 			// create role assignment
 			$role_assignment = $this->contact->mdl_user->add_role_assignment( TVS_PMP_Contact_Mapping::$target_role_id, $context, TVS_PMP_Contact_Mapping::$modifier_id, '', 0, 0 );
+			$this->contact->append_system_comment( sprintf( __( 'Mapped %s to this Contact. [%s]', 'tvs-moodle-parent-provisioning' ), $this->__toString(), date( 'Y-m-d H:i:s' ) ) );
 			return $role_assignment;
 		}
 		else {
@@ -543,6 +544,7 @@ class TVS_PMP_Contact_Mapping {
 		$role_assignment = $this->get_role_assignment( $context );
 		if ( $role_assignment ) {
 			// remove the assignment
+			$this->contact->append_system_comment( sprintf( __( 'Will unmap %s from this Contact. [%s]', 'tvs-moodle-parent-provisioning' ), $this->__toString(), date( 'Y-m-d H:i:s' ) ) );
 			return $this->contact->mdl_user->remove_role_assignment( $role_assignment );
 			$this->role_assignment_id = NULL; // flush our cache of this value
 		}
