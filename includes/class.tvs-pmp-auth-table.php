@@ -128,15 +128,13 @@ class TVS_PMP_Auth_Table extends TVS_WP_List_Table {
 	 */
 	public function get_sortable_columns() {
 
-                return array(
-			'username'	   => __( 'Username', 'tvs-moodle-parent-provisioning' ),
-			'parent_title'     => __( 'Title', 'tvs-moodle-parent-provisioning' ),
-			'parent_fname'     => __( 'Forename', 'tvs-moodle-parent-provisioning' ),
-
-			'parent_sname'     => __( 'Surname', 'tvs-moodle-parent-provisioning' ),
-			'request_id'       => __( 'ReqID', 'tvs-moodle-parent-provisioning' )
-
-                );
+                return [
+			'username'	   => [ 'username', false ],
+			'parent_title'     => [ 'parent_title', false ],
+			'parent_fname'     => [ 'parent_fname', false ], 
+			'parent_sname'     => [ 'parent_sname', false ],
+			'request_id'       => [ 'request_id', false ]
+		];
 
 	}
 
