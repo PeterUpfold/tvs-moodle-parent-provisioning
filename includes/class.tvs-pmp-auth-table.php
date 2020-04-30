@@ -141,15 +141,13 @@ class TVS_PMP_Auth_Table extends TVS_WP_List_Table {
 	 */
 	public function get_sortable_columns() {
 
-                return array(
-			'username'	   => __( 'Username', 'tvs-moodle-parent-provisioning' ),
-			'parent_title'     => __( 'Title', 'tvs-moodle-parent-provisioning' ),
-			'parent_fname'     => __( 'Forename', 'tvs-moodle-parent-provisioning' ),
-
-			'parent_sname'     => __( 'Surname', 'tvs-moodle-parent-provisioning' ),
-			'request_id'       => __( 'ReqID', 'tvs-moodle-parent-provisioning' )
-
-                );
+                return [
+			'username'	   => [ 'username', false ],
+			'parent_title'     => [ 'parent_title', false ],
+			'parent_fname'     => [ 'parent_fname', false ], 
+			'parent_sname'     => [ 'parent_sname', false ],
+			'request_id'       => [ 'request_id', false ]
+		];
 
 	}
 
@@ -279,7 +277,7 @@ class TVS_PMP_Auth_Table extends TVS_WP_List_Table {
 			if ( $this->moodle_dbc ) {
 				foreach( $results as $result ) {
 					$mdl_user = new TVS_PMP_mdl_user( $this->logger, $this->moodle_dbc );
-					$mdl_user->username = $parent_email;
+					$mdl_user->username = $result->parent_email;
 					$mdl_user->load( 'username' );
 					$result->is_orphaned = $mdl_user->is_orphaned();
 					$result->user = $mdl_user;
