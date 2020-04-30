@@ -234,20 +234,18 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 		?><p><?php
 		$profile_available = false;
 
-		if ( property_exists( $item, 'is_orphaned' ) ) {
-			if ( $item->is_orphaned ) {
-				?><span class="dashicons dashicons-no"></span><?php
-				_e( 'Not matched to a Parent Moodle user.', 'tvs-moodle-parent-provisioning' );
-			}
-			else {
-				?><span class="dashicons dashicons-update"></span><?php
-				_e( 'Matched to a Parent Moodle user.', 'tvs-moodle-parent-provisioning' );
-				$profile_available = true;
-			}
+		$item->load_mdl_user();
+
+		if ( ! $item->mdl_user_id ) {
+			?><span class="dashicons dashicons-no"></span><?php
+			_e( 'Not matched to a Parent Moodle user.', 'tvs-moodle-parent-provisioning' );
 		}
 		else {
-			_e( 'Unable to determine if connected to a Moodle user.', 'tvs-moodle-parent-provisioning' );
+			?><span class="dashicons dashicons-update"></span><?php
+			_e( 'Matched to a Parent Moodle user.', 'tvs-moodle-parent-provisioning' );
+			$profile_available = true;
 		}
+
 
 		$profile_url = trailingslashit( get_option( 'tvs-moodle-parent-provisioning-moodle-url' ) ) . 'user/profile.php?id=' . intval( $item->mdl_user->id );
 		$role_assignments_url = trailingslashit( get_option( 'tvs-moodle-parent-provisioning-moodle-url' ) ) . 'admin/roles/usersroles.php?courseid=1&amp;userid=' . intval( $item->mdl_user->id );
