@@ -252,7 +252,7 @@ class TVS_Parent_Moodle_Provisioning {
 	public function print_contacts_table_css() {
 ?>
 		<style type="text/css">
-		.wp-list-table .column-id, .wp-list-table .column-mis_id { width: 5% }
+		.wp-list-table .column-id, .wp-list-table .column-mis_id { width: 3% }
 		.wp-list-table .column-title { width: 6% }
 		</style>
 <?php

@@ -499,17 +499,8 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		if ( $request->get_param( 'staff_comment' ) ) {
 			$record->staff_comment = $request->get_param( 'staff_comment' );
 		}
-		if ( $request->get_param( 'date_created' ) ) {
-			$record->date_created = $request->get_param( 'date_created' );
-		}
-		if ( $request->get_param( 'date_updated' ) ) {
-			$record->date_updated = $request->get_param( 'date_updated' );
-		}
 		if ( $request->get_param( 'date_approved' ) ) {
 			$record->date_approved = $request->get_param( 'date_approved' );
-		}
-		if ( $request->get_param( 'date_synced' ) ) {
-			$record->date_synced = $request->get_param( 'date_synced' );
 		}
 
 		$result = $record->save();

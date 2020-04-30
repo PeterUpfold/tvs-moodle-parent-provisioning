@@ -377,7 +377,7 @@ class TVS_PMP_Contact {
 		global $wpdb;
 
 		$requests_raw = $wpdb->get_results( $wpdb->prepare(
-			'SELECT id, mis_id, external_mis_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix .'tvs_parent_moodle_provisioning_contact WHERE status = %s',
+			'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix .'tvs_parent_moodle_provisioning_contact WHERE status = %s',
 			$state
 		) );
 
@@ -517,6 +517,9 @@ class TVS_PMP_Contact {
 		if ( empty( $this->id ) || ! is_int( $this->id ) ) {
 
 			$this->logger->debug( __( 'ID was not set, so creating a new Contact.', 'tvs-moodle-parent-provisioning' ) );
+
+			$this->date_created = date( 'Y-m-d H:i:s' );
+
 			$affected_rows = $wpdb->insert(
 				$table_name,
 				array(
@@ -526,7 +529,7 @@ class TVS_PMP_Contact {
 					'forename'        => stripslashes( $this->forename ),
 					'surname'         => stripslashes( $this->surname ),
 					'email'           => stripslashes( strtolower( $this->email ) ),
-					'date_created'    => date( 'Y-m-d H:i:s' ),
+					'date_created'    => stripslashes( $this->date_created ),
 					'status'          => 'pending',
 				),
 				array(
@@ -577,6 +580,9 @@ class TVS_PMP_Contact {
 			}
 
 			$this->date_synced = date( 'Y-m-d H:i:s' );
+			$this->date_updated = date( 'Y-m-d H:i:s' ); //TODO determine if any property of substance actually changed and only update if so
+
+			$this->logger->debug( sprintf( 'date_created: %s', $this->date_created ) );
 
 			$affected_rows = $wpdb->update(
 				( $wpdb->prefix . TVS_PMP_Contact::$table_name ),
@@ -589,7 +595,7 @@ class TVS_PMP_Contact {
 					'surname'         => stripslashes( $this->surname ),
 					'email'           => stripslashes( strtolower( $this->email ) ),
 					'date_created'    => stripslashes( $this->date_created ),
-					'date_updated'    => date( 'Y-m-d H:i:s' ),
+					'date_updated'    => stripslashes( $this->date_updated ),
 					'date_approved'   => stripslashes( $this->date_approved ),
 					'date_synced'     => stripslashes( $this->date_synced ),
 					'status'          => stripslashes( $this->status ),
