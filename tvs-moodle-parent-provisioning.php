@@ -48,8 +48,7 @@ class TVS_Parent_Moodle_Provisioning {
 		add_action( 'wpcf7_before_send_mail', array( $this, 'store_form_submission' ) );
 		register_activation_hook( __FILE__, array( $this, 'create_tables' ) );
 		add_action( 'admin_menu', array( $this, 'add_menus' ) ) ;
-		add_action( 'admin_head', array( $this, 'print_table_css' ) );
-		add_action( 'admin_head', array( $this, 'print_auth_table_css' ) );
+		// requests table -- no longer relevant ?? add_action( 'admin_head', array( $this, 'print_table_css' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 		add_action( 'wp_ajax_tvs_moodle_parent_provisioning_upload_users', array( $this, 'handle_upload_users' ) );
 		
@@ -179,7 +178,7 @@ class TVS_Parent_Moodle_Provisioning {
 		);
 
 
-		add_submenu_page(
+		$auth_table_suffix = add_submenu_page(
 			'tvs_parent_moodle_provisioning',
 			__( 'Moodle Provisioning &mdash; Authorised Users', 'tvs-moodle-parent-provisioning' ),
 			__( 'Authorised Users', 'tvs-moodle-parent-provisioning' ),
@@ -188,7 +187,9 @@ class TVS_Parent_Moodle_Provisioning {
 			array( $this, 'print_admin_page_auth_table' )
 		);
 
-		add_submenu_page(
+		add_action( 'admin_head-' . $auth_table_suffix, [ $this, 'print_auth_table_css' ] );
+
+		$contacts_table_suffix = add_submenu_page(
 			'tvs_parent_moodle_provisioning',
 			__( 'Moodle Provisioning &mdash; Contacts', 'tvs-moodle-parent-provisioning' ),
 			__( 'Contacts', 'tvs-moodle-parent-provisioning' ),
@@ -196,6 +197,7 @@ class TVS_Parent_Moodle_Provisioning {
 			'tvs_parent_moodle_provisioning_contacts_table',
 			[ $this, 'print_admin_page_contacts_table' ]
 		);
+		add_action( 'admin_head-' . $contacts_table_suffix, [ $this, 'print_contacts_table_css' ] );
 
 		add_submenu_page(
 			'tvs_parent_moodle_provisioning',
@@ -245,7 +247,19 @@ class TVS_Parent_Moodle_Provisioning {
 	}
 
 	/**
-	 * Print the CSS for the table.
+	 * Print the CSS for column widths for the Contacts table.
+	 */
+	public function print_contacts_table_css() {
+?>
+		<style type="text/css">
+		.wp-list-table .column-id, .wp-list-table .column-mis_id { width: 5% }
+		.wp-list-table .column-title { width: 6% }
+		</style>
+<?php
+	}
+
+	/**
+	 * Print the CSS for the table. TODO maybe obsolete -- requests table
 	 */
 	public function print_table_css() {
 		if ( array_key_exists( 'page', $_GET ) && 'tvs_parent_moodle_provisioning' == $_GET['page'] ) {

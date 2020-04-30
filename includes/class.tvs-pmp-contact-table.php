@@ -122,7 +122,8 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 
 			'surname'          => __( 'Surname', 'tvs-moodle-parent-provisioning' ),
 			'description'      => __( 'Details', 'tvs-moodle-parent-provisioning' ),
-			'status'           => __( 'Status', 'tvs-moodle-parent-provisioning' )
+			'status'           => __( 'Status', 'tvs-moodle-parent-provisioning' ),
+			'date_updated'     => __( 'Updated', 'tvs-moodle-parent-provisioning' )
 		];
 	}
 
@@ -168,7 +169,8 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 			'mis_id'           => [ 'mis_id', false ],
 			'username'         => [ 'username', false ],
 			'surname'          => [ 'surname', false ],
-			'status'           => [ 'status', false ]
+			'status'           => [ 'status', false ],
+			'date_updated'     => [ 'date_updated', false ]
 		];
 
 	}
@@ -187,6 +189,41 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 	 */
 	public function column_username( $item ) {
 		echo esc_html( $item->email );
+	}
+
+	/**
+	 * Display handler for date column.
+	 */
+	public function column_date_updated( $item ) {
+	
+		$before_tz = @date_default_timezone_get();
+		date_default_timezone_set( get_option( 'timezone_string' ) );
+	
+		?><p><strong><?php _e( 'Updated:', 'tvs-moodle-parent-provisioning' ); ?></strong>&nbsp;&nbsp;<?php
+
+		if ( strtotime( $item->date_updated ) > 0 ) {
+			echo esc_html( date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $item->date_updated . ' UTC' ) ) );
+		}
+		else {
+			_e( 'Not yet updated.', 'tvs-moodle-parent-provisioning' ); 
+		}
+
+		?></p><p><strong><?php _e( 'Created:', 'tvs-moodle-parent-provisioning' ); ?></strong>&nbsp;&nbsp;<?php
+
+		echo esc_html( date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $item->date_created . ' UTC' ) ) );
+
+	
+		?></p><?php
+
+		?></p><p><strong><?php _e( 'Synced:', 'tvs-moodle-parent-provisioning' ); ?></strong>&nbsp;&nbsp;<?php
+
+		echo esc_html( date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $item->date_synced . ' UTC' ) ) );
+
+	
+		?></p><?php
+
+		// reset timezone again
+		date_default_timezone_set( $before_tz );	
 	}
 
 	/**
@@ -248,6 +285,7 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 	 */
 	public function get_data( $orderby, $order, $offset, $limit, $search = '' ) {
 		global $wpdb;
+
 		
 		$tn = TVS_PMP_Contact_Table::$db_table_name;
 
@@ -301,27 +339,9 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 
 		$total_items = $this->get_total_items( $search );
 
-		$orderby = '';
+		$orderby = $_GET['orderby'];
 
-		if ( array_key_exists( 'orderby', $_GET ) ) {
-			switch ( $_GET['orderby'] ) {
-				case 'T':
-					$orderby = 'status';
-				break;
-				case 'F':
-					$orderby = 'forename';
-				break;
-				case 'S':
-					$orderby = 'surname';
-				break;
-				case 'I':
-				default:
-					$orderby = 'id';
-				break;
-			}
-		}
-
-		if ( '' == $orderby ) {
+		if ( ! in_array( $orderby, TVS_PMP_Contact_Table::$field_names, true ) ) {
 			$orderby = 'id';
 		}
 
