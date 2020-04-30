@@ -152,13 +152,24 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 	 */
 	public function get_sortable_columns() {
 
- 		return [ 
-			'id'               => __('ID', 'tvs-moodle-parent-provisioning' ),
-			'mis_id'           => __('MIS ID', 'tvs-moodle-parent-provisioning' ),
+ 		/*return [ 
+			'id'               => __( 'ID', 'tvs-moodle-parent-provisioning' ),
+			'mis_id'           => __( 'MIS ID', 'tvs-moodle-parent-provisioning' ),
 			'username'	   => __( 'Username/Email', 'tvs-moodle-parent-provisioning' ),
 			'surname'          => __( 'Surname', 'tvs-moodle-parent-provisioning' ),
 			'status'           => __( 'Status', 'tvs-moodle-parent-provisioning' )
 		]; /* TODO date to be separate column for sorting ? */
+
+		/* format changed in some WP version -- now requires array with keys = column name, value = array
+		 * containing column name as 0th entry and 'descfirst' bool as 1st entry
+		 */
+		return [
+			'id'               => [ 'id', false ],
+			'mis_id'           => [ 'mis_id', false ],
+			'username'         => [ 'username', false ],
+			'surname'          => [ 'surname', false ],
+			'status'           => [ 'status', false ]
+		];
 
 	}
 
