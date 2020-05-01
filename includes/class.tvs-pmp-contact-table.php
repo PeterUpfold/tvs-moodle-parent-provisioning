@@ -191,6 +191,14 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 		echo esc_html( $item->email );
 	}
 
+
+	/**
+	 * Display handler for the status column.
+	 */
+	public function column_status( $item ) {
+		echo esc_html( $this->status_titlecase( $item->status ) );
+	}
+
 	/**
 	 * Display handler for date column.
 	 */
@@ -294,7 +302,7 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 			$orderby = 'id';
 		}
 
-		$results = TVS_PMP_Contact::load_by_query( $orderby, $order, $offset, $limit, $this->logger, $this->moodle_dbc, $search );
+		$results = TVS_PMP_Contact::load_by_query( $orderby, $order, $offset, $limit, $this->logger, $this->moodle_dbc, $search, $this->get_status_from_query_string() );
 
 		return $results;
 
@@ -305,11 +313,24 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 	 */
 	public function get_total_items( $search = '' ) {
 		
-		$results = TVS_PMP_Contact::count_by_query( $search );
+		$results = TVS_PMP_Contact::count_by_query( $search, $this->get_status_from_query_string() );
 
 		return $results;
 	}
 
+
+	/**
+	 * Return a sanitised status value from the query string if present.
+	 *
+	 * @return string
+ 	 */
+	protected function get_status_from_query_string() {
+		$status = '';
+		if ( array_key_exists( 'status', $_GET ) && in_array( $_GET['status'], TVS_PMP_Contact::$statuses ) ) {
+			$status = $_GET['status'];
+		}
+		return $status;
+	}
 
 
 	/**
@@ -337,7 +358,10 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 
 		$total_items = $this->get_total_items( $search );
 
-		$orderby = $_GET['orderby'];
+		$orderby = '';
+		if ( array_key_exists( 'orderby', $_GET ) ) {
+			$orderby = $_GET['orderby'];
+		}
 
 		if ( ! in_array( $orderby, TVS_PMP_Contact_Table::$field_names, true ) ) {
 			$orderby = 'id';
@@ -368,6 +392,57 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 			'per_page'		=>	$per_page,
 			'total_pages'		=>	ceil( $total_items / $per_page )
 		) );
+	}
+
+	/**
+	 * Define the filterable views at the top of the table.
+	 */
+	public function get_views() {
+		if ( array_key_exists( 'status', $_GET ) && in_array( $_GET['status'], TVS_PMP_Contact::$statuses ) ) {
+			$status = $_GET['status'];
+		}
+		else if ( array_key_exists( 'status', $_GET ) && 'all' == $_GET['status'] ) {
+			$status = 'all';
+			$this->should_display_status = true;
+		}
+		else {
+			$status = 'provisioned';
+		}
+
+		$views = [];
+
+		foreach( TVS_PMP_Contact::$statuses as $stat ) {
+			if ( $stat == $status ) {
+				$class = ' class="current"';
+			}
+			else {
+				$class = '';
+			}
+
+			$stat_titlecase = $this->status_titlecase( $stat );
+
+			$views[$stat] = "<a href='" . esc_url( add_query_arg( 'status', $stat, 'admin.php?page=tvs_parent_moodle_provisioning_contacts_table' ) ) . "'$class>$stat_titlecase</a>";
+
+		}
+
+		// add 'all' status
+		if ( 'all' == $status ) {
+			$class = ' class="current"';
+		}
+		else {
+			$class = '';
+		}
+		$views['all'] = "<a href='" . esc_url( add_query_arg( 'status', 'all', 'admin.php?page=tvs_parent_moodle_provisioning_contacts_table' ) ) . "'$class><em>All</em></a>";
+		return $views;
+	}
+
+	/**
+	 * Return the status in titlecase form.
+	 *
+	 * @return string
+	 */
+	protected function status_titlecase( $status ) {
+		return strtoupper( substr( $status, 0, 1 ) ) . substr( $status, 1 );
 	}
 
 

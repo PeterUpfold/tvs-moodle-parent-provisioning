@@ -412,11 +412,12 @@ class TVS_PMP_Contact {
 	 * @param \Monolog\Logger\Logger $logger An instance of \Monolog\Logger\Logger for logging purposes.
 	 * @param \mysqli $dbc A connection to the Moodle database.
 	 * @param string $search The search query. Searches across fields for name.
+	 * @param string $status Limit results to results with this 'status' in the DB, or empty string for all.
 	 *
 	 * @return array of TVS_PMP_Contact 
 	 *
 	 */
-	public static function load_by_query( $orderby, $order, $offset, $limit, $logger, $dbc, $search = '' ) {
+	public static function load_by_query( $orderby, $order, $offset, $limit, $logger, $dbc, $search = '', $status = '' ) {
 		global $wpdb;
 
 
@@ -425,6 +426,15 @@ class TVS_PMP_Contact {
 				sprintf(
 					__( '$orderby must be one of the valid field names: %s', 'tvs-moodle-parent-provisioning' ),
 					implode(',', TVS_PMP_Contact::$valid_field_names )
+				)
+			);
+		}
+
+		if ( strlen( $status ) > 0 && ! in_array( $status, TVS_PMP_Contact::$statuses ) ) {
+			throw new InvalidArgumentException(
+				sprintf(
+					__( '$status must be one of the valid statuses: %s', 'tvs-moodle-parent-provisioning' ),
+					implode( ',', TVS_PMP_Contact::$statuses )
 				)
 			);
 		}
@@ -448,18 +458,40 @@ class TVS_PMP_Contact {
 		$prepared_query = NULL;
 		if ( strlen( $search ) < 1 ) {
 			// no search
-			$prepared_query = $wpdb->prepare(
-				'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
-				$offset, $limit
-			);
+
+			// status != all
+			if ( strlen( $status ) > 0 ) {
+				$prepared_query = $wpdb->prepare(
+					'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE status = %s ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
+					$status, $offset, $limit
+				);
+
+			}
+			else { // status == all
+				$prepared_query = $wpdb->prepare(
+					'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
+					$offset, $limit
+				);
+			}
 		}
 		else {
 			// search query
 			$like = '%' . $wpdb->esc_like( $search ) . '%';
-			$prepared_query = $wpdb->prepare(
-				'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE forename LIKE %s OR surname LIKE %s ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
-				$like, $like, $offset, $limit
-			);
+
+			// status != all
+			if ( strlen( $status ) > 0 ) {
+				$prepared_query = $wpdb->prepare(
+					'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE status = %s AND (forename LIKE %s OR surname LIKE %s) ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
+					$status, $like, $like, $offset, $limit
+				);
+
+			}
+			else { // status == all
+				$prepared_query = $wpdb->prepare(
+					'SELECT id, mis_id, external_mis_id, mdl_user_id, title, forename, surname, email, status, staff_comment, system_comment, date_created, date_updated, date_approved, date_synced FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE forename LIKE %s OR surname LIKE %s ORDER BY ' . $orderby . ' ' . $order . ' LIMIT %d, %d',
+					$like, $like, $offset, $limit
+				);
+			}
 		}
 
 		$request_objs = [];
@@ -481,24 +513,52 @@ class TVS_PMP_Contact {
 	 * query.
 	 *
 	 * @param string $search The search query. Searches across fields for name.
+	 * @param string $status Limit results to results with this 'status' in the DB, or empty string for all.
 	 *
 	 *
 	 * @return int The count of rows.
 	 */
-	public static function count_by_query( $search = '' ) {
+	public static function count_by_query( $search = '', $status = '' ) {
 		global $wpdb;
+
+		if ( strlen( $status ) > 0 && ! in_array( $status, TVS_PMP_Contact::$statuses ) ) {
+			throw new InvalidArgumentException(
+				sprintf(
+					__( '$status must be one of the valid statuses: %s', 'tvs-moodle-parent-provisioning' ),
+					implode( ',', TVS_PMP_Contact::$statuses )
+				)
+			);
+		}
+
 		$prepared_query = NULL;
 		if ( strlen( $search ) < 1 ) {
-			// no search -- no parameters to prepare
-			$prepared_query = 'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact';
+			if ( strlen( $status ) > 0 ) {
+				$prepared_query = $wpdb->prepare(
+					'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE status = %s',
+					$status
+				);
+			}
+			else {
+				// no search, all status -- no parameters to prepare
+				$prepared_query = 'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact';
+			}
 		}
 		else {
 			// search query
 			$like = '%' . $wpdb->esc_like( $search ) . '%';
-			$prepared_query = $wpdb->prepare(
-				'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE forename LIKE %s OR surname LIKE %s',
-				$like, $like
-			);
+			if ( strlen( $status ) > 0 ) {
+				$prepared_query = $wpdb->prepare(
+					'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE status = %s AND (forename LIKE %s OR surname LIKE %s)',
+					$status, $like, $like
+				);
+
+			}
+			else {
+				$prepared_query = $wpdb->prepare(
+					'SELECT COUNT(id) FROM ' . $wpdb->prefix . 'tvs_parent_moodle_provisioning_contact WHERE forename LIKE %s OR surname LIKE %s',
+					$like, $like
+				);
+			}
 		}
 
 		return $wpdb->get_var( $prepared_query );
