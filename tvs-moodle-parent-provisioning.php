@@ -542,6 +542,24 @@ class TVS_Parent_Moodle_Provisioning {
 	 * Register and enqueue any scripts and styles that we may need for this plugin on the admin side.
 	 */
 	public function enqueue_admin_scripts( $hook ) { 
+
+		if ( strpos( $hook, 'page_tvs_parent_moodle_provisioning_contacts_table' ) !== false ) {
+			wp_register_script(
+				'tvs-pmp-contacts',
+				plugins_url( '/js/contacts.js', __FILE__ ),
+				array( 'jquery' ),
+				hash( 'sha256', @filemtime( dirname( __FILE__ ) . '/js/contacts.js' ) ),
+				true
+			);
+
+			wp_enqueue_script( 'tvs-pmp-contacts' );
+
+			wp_localize_script( 'tvs-pmp-contacts', 'wpApiSettings', [
+				'root' => esc_url_raw( rest_url() ),
+				'nonce' => wp_create_nonce( 'wp_rest' )
+			] );
+		}
+
 		if ( strpos( $hook, 'page_tvs_parent_moodle_provisioning_upload_users' ) === false ) {
 			return;
 		}
