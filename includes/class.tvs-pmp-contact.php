@@ -749,7 +749,12 @@ class TVS_PMP_Contact {
                 // add to external Moodle auth table and wait there until the next cron-initiated provision cycle
                 $username = strtolower( $this->email );
                 $title = $this->title;
-                $forename = $this->title . ' ' . $this->forename; //TODO make this configurable for GD
+		if ( 'forename-contains-title' == get_option( 'tvs-moodle-parent-provisioning-moodle-name-format' ) ) {
+			$forename = $this->title . ' ' . $this->forename;
+		}
+		else {
+			$forename = $this->forename;
+		}
                 $surname = $this->surname;
                 $email = strtolower( $this->email );
                 $description = __( 'Parent Moodle Account', 'tvs-moodle-parent-provisioning' );

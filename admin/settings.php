@@ -189,6 +189,23 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) || !defined( 'T
 		<p class="description"><?php _e( 'Matching on <em>First Name, Surname &amp; Department Number</em> requires that your directory is accurately populated with Tutor Group information. If you choose to match on <em>First Name &amp; Surname only</em>, this is not required, but there is a greater risk of a name collision when trying to provision accounts. In that case, the provisioner will refuse to connect parents to pupils and manual intervention will be required.', 'tvs-moodle-parent-provisioning' ); ?></p>
 	</td>
 </tr>
+
+<tr>
+	<th scope="row"><?php _e( 'Moodle Name Format', 'tvs-moodle-parent-provisioning' ); ?></th>
+	<td>
+		<select id="moodle-name-format" name="moodle-name-format">
+			<option value="forename-only"<?php TVS_Parent_Moodle_Provisioning::print_selected_attribute( 'moodle-name-format', 'forename-only' ); ?>>
+				<?php _e( 'Forename contains forename only', 'tvs-moodle-parent-provisioning' ); ?>
+			</option>
+			<option value="forename-contains-title"<?php TVS_Parent_Moodle_Provisioning::print_selected_attribute( 'moodle-name-format', 'forename-contains-title' ); ?>>
+				<?php _e( 'Forename contains title', 'tvs-moodle-parent-provisioning' ); ?>
+			</option>
+
+		</select>
+		<p class="description"><?php _e( 'Determines whether the Moodle user is created with a forename that includes the Parent Title ("Mr Demonstration", "Parent") or just the forename ("Demonstration Parent").', 'tvs-moodle-parent-provisioning' ); ?></p>
+	</td>
+</tr>
+
 <tr>
 	<th scope="row" colspan="2">
 		<h3><?php _e( 'Email Configuration', 'tvs-moodle-parent-provisioning' ); ?></h3>

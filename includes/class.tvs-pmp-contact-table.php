@@ -265,8 +265,7 @@ class TVS_PMP_Contact_Table extends TVS_WP_List_Table {
 
 		<span class="view_profile"><a href="<?php echo esc_url( $profile_url ); ?>" target="_blank"><?php _e( 'View Profile', 'tvs-moodle-parent-provisioning' ); ?></a></span> |
 		<span class="role_assignments"><a href="<?php echo esc_url( $role_assignments_url ); ?>" target="_blank"><?php _e( 'Role Assignments', 'tvs-moodle-parent-provisioning' ); ?></a></span> |
-		<span class="logs"><a href="<?php echo esc_url( $logs_url ); ?>" target="_blank"><?php _e( 'Logs', 'tvs-moodle-parent-provisioning' ); ?></a></span> |
-		<span class="delete"><a href="" class="delete-current-moodle-user" data-contact-id="<?php echo intval( $item->request_id ); ?>"><?php _e( 'Delete', 'tvs-moodle-parent-provisioning' ); ?></a></span>
+		<span class="logs"><a href="<?php echo esc_url( $logs_url ); ?>" target="_blank"><?php _e( 'Logs', 'tvs-moodle-parent-provisioning' ); ?></a></span>
 
 		<?php else: ?>
 		<?php

@@ -159,27 +159,38 @@ class TVS_Parent_Moodle_Provisioning {
 			$pending_count = intval( $pending_count );
 		}
 
-		add_menu_page(
+		$contacts_table_suffix = add_menu_page(
 			__( 'Parent Moodle Provisioning', 'tvs-moodle-parent-provisioning' ),
-			__( 'Moodle Provisioning', 'tvs-moodle-parent-provisioning' ) . '<span class="awaiting-mod count-' . $pending_count . '" style="padding:4px;">' . $pending_count . '</span>',
+			__( 'Parent Moodle Provisioning', 'tvs-moodle-parent-provisioning' ) . '<span class="awaiting-mod count-' . $pending_count . '" style="padding:4px;">' . $pending_count . '</span>',
 			TVS_PMP_REQUIRED_CAPABILITY,
-			'tvs_parent_moodle_provisioning',
-			array( $this, 'print_admin_page_main' ),
+			'tvs_parent_moodle_provisioning_contacts_table',
+			array( $this, 'print_admin_page_contacts_table' ),
 			'dashicons-admin-users'					
 		);
 
-		add_submenu_page(
+	/*	add_submenu_page(
 			'tvs_parent_moodle_provisioning',
 			__( 'Moodle Provisioning', 'tvs-moodle-parent-provisioning' ),
 			__( 'Requests', 'tvs-moodle-parent-provisioning' ),
 			TVS_PMP_REQUIRED_CAPABILITY,
 			'tvs_parent_moodle_provisioning',
 			array( $this, 'print_admin_page_main' )
-		);
+	);*/
 
+
+
+		$contacts_table_suffix = add_submenu_page(
+			'tvs_parent_moodle_provisioning_contacts_table',
+			__( 'Moodle Provisioning &mdash; Contacts', 'tvs-moodle-parent-provisioning' ),
+			__( 'Contacts', 'tvs-moodle-parent-provisioning' ),
+			TVS_PMP_REQUIRED_CAPABILITY,
+			'tvs_parent_moodle_provisioning_contacts_table',
+			[ $this, 'print_admin_page_contacts_table' ]
+	);
+		add_action( 'admin_head-' . $contacts_table_suffix, [ $this, 'print_contacts_table_css' ] );
 
 		$auth_table_suffix = add_submenu_page(
-			'tvs_parent_moodle_provisioning',
+			'tvs_parent_moodle_provisioning_contacts_table',
 			__( 'Moodle Provisioning &mdash; Authorised Users', 'tvs-moodle-parent-provisioning' ),
 			__( 'Authorised Users', 'tvs-moodle-parent-provisioning' ),
 			TVS_PMP_REQUIRED_CAPABILITY,
@@ -188,28 +199,17 @@ class TVS_Parent_Moodle_Provisioning {
 		);
 
 		add_action( 'admin_head-' . $auth_table_suffix, [ $this, 'print_auth_table_css' ] );
-
-		$contacts_table_suffix = add_submenu_page(
-			'tvs_parent_moodle_provisioning',
-			__( 'Moodle Provisioning &mdash; Contacts', 'tvs-moodle-parent-provisioning' ),
-			__( 'Contacts', 'tvs-moodle-parent-provisioning' ),
-			TVS_PMP_REQUIRED_CAPABILITY,
-			'tvs_parent_moodle_provisioning_contacts_table',
-			[ $this, 'print_admin_page_contacts_table' ]
-		);
-		add_action( 'admin_head-' . $contacts_table_suffix, [ $this, 'print_contacts_table_css' ] );
-
-		add_submenu_page(
+	/*	add_submenu_page(
 			'tvs_parent_moodle_provisioning',
 			__( 'Moodle Provisioning &mdash; Upload Users', 'tvs-moodle-parent-provisioning' ),
 			__( 'Upload Users', 'tvs-moodle-parent-provisioning' ),
 			TVS_PMP_REQUIRED_CAPABILITY,
 			'tvs_parent_moodle_provisioning_upload_users',
 			array( $this, 'print_admin_page_upload_users' )
-		);
+	);*/
 		
 		add_submenu_page(
-			'tvs_parent_moodle_provisioning',
+			'tvs_parent_moodle_provisioning_contacts_table',
 			__( 'Moodle Provisioning Settings', 'tvs-moodle-parent-provisioning' ),
 			__( 'Settings', 'tvs-moodle-parent-provisioning' ),
 			TVS_PMP_REQUIRED_CAPABILITY,
@@ -217,14 +217,24 @@ class TVS_Parent_Moodle_Provisioning {
 			array( $this, 'print_admin_page_settings' )
 		);
 
-		add_submenu_page(
+/*		add_submenu_page(
 			'tvs_parent_moodle_provisioning',
 			__( 'Moodle Provisioning &mdash; Batch Logs', 'tvs-moodle-parent-provisioning' ),
 			__( 'Batch Logs', 'tvs-moodle-parent-provisioning' ),
 			TVS_PMP_REQUIRED_CAPABILITY,
 			'tvs_parent_moodle_provisioning_batch_logs',
 			array( $this, 'print_admin_page_batch_logs' )
+);*/
+
+		add_submenu_page(
+			'tvs_parent_moodle_provisioning_contacts_table',
+			__( 'Moodle Provisioning Logs', 'tvs-moodle-parent-provisioning' ),
+			__( 'Logs', 'tvs-moodle-parent-provisioning' ),
+			TVS_PMP_REQUIRED_CAPABILITY,
+			'tvs_parent_moodle_provisioning_logs',
+			[ $this, 'print_admin_page_logs' ]
 		);
+
 	}
 
 	/**
@@ -372,6 +382,7 @@ class TVS_Parent_Moodle_Provisioning {
 					'smtp-password',
 					'provisioning-email-recipients',
 					'log-level',
+					'moodle-name-format'
 				 );
 
 				 foreach( $settings_to_update as $setting ) {
@@ -395,6 +406,22 @@ class TVS_Parent_Moodle_Provisioning {
 			
 
 			require( dirname( __FILE__ ) . '/admin/upload-users.php' );
+		}
+	}
+
+
+	/**
+	 * Prints to output the sync logs page showing the log file.
+	 */
+	public function print_admin_page_logs() {
+		if ( ! current_user_can( TVS_PMP_REQUIRED_CAPABILITY ) ) {
+			echo 'You are not permitted to access this page.';
+		}
+		else {
+
+			
+
+			require( dirname( __FILE__ ) . '/admin/sync-logs.php' );
 		}
 	}
 
@@ -696,6 +723,11 @@ class TVS_Parent_Moodle_Provisioning {
 				return;
 			}
 
+			if ( 'moodle-name-format' == $name && ! $this->validate_moodle_name_format_setting( $_POST[ $name ] ) ) {
+				$success = sprintf( __( 'Failed to update setting \'%s\', as \'%s\' is not a valid option.', 'tvs-moodle-parent-provisioning' ), $name, esc_html( $_POST[ $name ] ) );
+				return;
+			}
+
 			update_option( 'tvs-moodle-parent-provisioning-' . $name, stripslashes( $_POST[ $name ] ) );
 			$success = __( 'Settings saved.', 'tvs-moodle-parent-provisioning' );
 		}
@@ -709,6 +741,15 @@ class TVS_Parent_Moodle_Provisioning {
 	 */
 	protected function validate_match_by_setting( $option ) {
 		return ( 'firstname-surname-departmentnumber' == $option || 'firstname-surname-only' == $option );
+	}
+
+	/**
+	 * Return true if the input string is a valid choice for our 'moodle-name-format' setting.
+	 *
+	 * @return bool
+	 */
+	protected function validate_moodle_name_format_setting( $option ) {
+		return ( 'forename-only' == $option || 'forename-contains-title' == $option );
 	}
 
 	/**

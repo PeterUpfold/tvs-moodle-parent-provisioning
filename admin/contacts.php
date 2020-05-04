@@ -35,7 +35,13 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) || !defined( 'T
 
 <?php if ( TVS_Parent_Moodle_Provisioning::settings_are_populated() ): ?>
 
+<div id="message" class="notice">
+<p><?php _e( 'Contacts and Contact Mappings are managed by the synchronisation script and are therefore kept in sync with the Management Information System. Any required changes should be made in the MIS and then the sync script should be re-run.', 'tvs-moodle-parent-provisioning' ); ?></p>
+<p><?php _e( 'The provisioning and delete processes are <strong>two pass</strong>. During provisioning, a Contact&rsquo;s status will be <em>partial</em> while their Moodle account has not yet been set up by the Moodle database user sync task. After this, the Contact sync must run again before the status will become <em>provisioned</em>. Similarly, a Contact being deleted will have the transitional status <em>deleting</em> until the Moodle database user sync task suspends the user and the Contact sync has re-run.', 'tvs-moodle-parent-provisioning' ); ?></p>
+</div>
+
 <form id="pmp-search" method="POST" action="">
+
 	<p class="search-box">
 		<input id="search-input" type="search" name="s" value="<?php
 			if ( isset( $_REQUEST['s'] ) ) {
