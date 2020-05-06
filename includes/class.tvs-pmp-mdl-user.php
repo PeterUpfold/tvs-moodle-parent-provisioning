@@ -270,7 +270,7 @@ class TVS_PMP_mdl_user {
 
 		$this->logger->debug( sprintf( __( 'Determine role assignment for user %d with role %d in context %d', 'tvs-moodle-parent-provisioning' ), $this->id, $roleid, $contextid ) );
 
-		$stmt = $this->dbc->prepare( "SELECT id FROM {$this->dbprefix}role_assignments WHERE roleid = ? AND contextid = ? AND id = ?" );
+		$stmt = $this->dbc->prepare( "SELECT id FROM {$this->dbprefix}role_assignments WHERE roleid = ? AND contextid = ? AND userid = ?" );
 
 		if ( ! $stmt ) {
 			throw new Exception( sprintf( __( 'Failed to prepare the database statement to get role assignments. Error: %s', 'tvs-moodle-parent-provisioning' ), $this->dbc->error ) );

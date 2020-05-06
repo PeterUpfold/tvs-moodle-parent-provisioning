@@ -1064,7 +1064,7 @@ class TVS_PMP_Contact {
 		$contexts_raw = get_option( 'tvs-moodle-parent-provisioning-contexts-to-add-role' );
 
 
-		$this->logger->info( __( 'Will now ensure the role assignments for all static contexts are created.', 'tvs-moodle-parent-provisioning' ) );
+		$this->logger->debug( __( 'Will now ensure the role assignments for all static contexts are created.', 'tvs-moodle-parent-provisioning' ) );
 
 		if ( ! $contexts_raw ) {
 			$this->logger->warning( __( 'There were no "Contexts to Add Role" found from the plugin settings. Therefore, we have no static contexts to set. Review the plugin Settings to ensure this is correct.', 'tvs-moodle-parent-provisioning' ) );
@@ -1107,12 +1107,12 @@ class TVS_PMP_Contact {
 				$this->mdl_user->add_role_assignment( TVS_PMP_Contact_Mapping::$target_role_id, $context_id, TVS_PMP_Contact::$modifier_id, '', 0, 0 ); 
 			}
 			else {
-				$this->logger->info( sprintf( __( 'Parent with ID %d already had a role assignment for context %d', 'tvs-moodle-parent-provisioning' ), $parent_userid, $context_id ) );
+				$this->logger->debug( sprintf( __( 'Parent with ID %d already had a role assignment for context %d', 'tvs-moodle-parent-provisioning' ), $this->mdl_user->id, $context_id ) );
 			}
 
 		}
 
-		$this->logger->info( __( 'Completed ensuring role assignments for static contexts.', 'tvs-moodle-parent-provisioning' ) );
+		$this->logger->debug( __( 'Completed ensuring role assignments for static contexts.', 'tvs-moodle-parent-provisioning' ) );
 
 		return true;
 

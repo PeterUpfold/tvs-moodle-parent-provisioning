@@ -153,7 +153,6 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 	 * @return bool
 	 */
 	public function user_has_permission() {
-		var_dump( current_user_can( TVS_PMP_REQUIRED_CAPABILITY ) );
 		return current_user_can( TVS_PMP_REQUIRED_CAPABILITY );
 	}
 	
