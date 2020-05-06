@@ -329,6 +329,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 			);
 		}
 
+		$this->logger->info( sprintf( __( 'Mapped the Contact \'%s\' to \'%s\'.', 'tvs-moodle-parent-provisioning' ), $contact->__toString(), $mapping->__toString() ) );
+
 		return new WP_REST_Response( array(
 				'success'            => true,
 				'record'             => $mapping
@@ -369,6 +371,8 @@ class TVS_PMP_Contact_Mapping_REST_Controller extends WP_REST_Controller {
 				return new WP_Error( 'failed_unmap', sprintf( __( 'Failed to unmap \'%s\'', 'tvs-moodle-parent-provisioning' ), $record ), array( 'status' => 500 ) );
 			}
 		}
+
+		$this->logger->info( sprintf( __( 'Unmapped \'%s\'.', 'tvs-moodel-parent-provisioning' ), $record->__toString() ) );
 
 		if ( ! $record->delete() ) {
 				return new WP_Error( 'failed_delete', sprintf( __( 'Failed to delete \'%s\' from internal database', 'tvs-moodle-parent-provisioning' ), $record ), array( 'status' => 500 ) );

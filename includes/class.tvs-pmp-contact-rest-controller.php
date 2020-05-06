@@ -364,7 +364,7 @@ class TVS_PMP_Contact_REST_Controller extends WP_REST_Controller {
 		else if ( NULL != $external_mis_id ) {
 			$record->external_mis_id = $external_mis_id;
 			if ( ! $record->load( 'external_mis_id' ) ) {
-				$this->logger->warning( sprintf( __( 'Unable to load Contact with external MIS ID %s', 'tvs-moodle-parent-provisioning' ), $external_mis_id ) );
+				$this->logger->info( sprintf( __( 'Unable to load Contact with external MIS ID %s', 'tvs-moodle-parent-provisioning' ), $external_mis_id ) ); // this is an info since we will hit this code path when creating a new Contact
 				$record = NULL;	
 			}
 		}

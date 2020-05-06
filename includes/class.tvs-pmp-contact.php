@@ -628,7 +628,7 @@ class TVS_PMP_Contact {
 			$this->logger->debug( sprintf( __( 'ID was set, so updating %s.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 
 			if ( !$this->mdl_user_id ) {
-				$this->logger->warning( sprintf( __( 'No mdl_user_id was available at the time of saving %s. Will try to load this information.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
+				$this->logger->info( sprintf( __( 'No mdl_user_id was available at the time of saving %s. This is normal if the Moodle user has not synced yet. Will try to load this information.', 'tvs-moodle-parent-provisioning' ), $this->__toString() ) );
 				
 				// it's possible our Contact entry exists but the Moodle user still is not provisioned (script not run?), so we must catch this
 				try {
