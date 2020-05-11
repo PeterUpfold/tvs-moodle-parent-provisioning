@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) ) {
 	die();
 }
 
-define( 'TVS_PMP_DBVERSION', '1.4' );
+define( 'TVS_PMP_DBVERSION', '2.0' );
 define( 'TVS_PMP_REQUIRED_CAPABILITY', 'manage_parent_moodle_account_requests' );
 
 // autoload our vendor classes
