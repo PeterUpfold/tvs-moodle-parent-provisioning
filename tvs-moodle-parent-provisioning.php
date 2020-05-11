@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'add_action' ) ) {
 	die();
 }
 
-define( 'TVS_PMP_DBVERSION', '1.4' );
+define( 'TVS_PMP_DBVERSION', '1.5' );
 define( 'TVS_PMP_REQUIRED_CAPABILITY', 'manage_parent_moodle_account_requests' );
 
 // autoload our vendor classes
@@ -56,6 +56,11 @@ class TVS_Parent_Moodle_Provisioning {
 		require_once( dirname( __FILE__ ) . '/includes/class.tvs-pmp-actions-rest-controller.php' );
 		$rest_controller = new TVS_PMP_Actions_REST_Controller();
 		add_action( 'rest_api_init', array( $rest_controller, 'register_routes' ) );
+
+		if ( ! get_option( 'tvs_parent_moodle_provisioning_dbversion' ) !== TVS_PMP_DBVERSION ) {
+			$this->create_tables();
+		}
+
 	}
 
 	/**
@@ -93,7 +98,9 @@ class TVS_Parent_Moodle_Provisioning {
 			remote_ip_addr varchar(255) NOT NULL,
 			provisioned_username varchar(255),
 			provisioned_initialpass varchar(255),
-			request_type varchar(255)
+			request_type varchar(255),
+			mis_id bigint(20) NULL,
+			external_mis_id varchar(128) DEFAULT NULL
 		) $charset_collate;";
 
 		require_once ( ABSPATH . 'wp-admin/includes/upgrade.php' );
@@ -118,7 +125,7 @@ class TVS_Parent_Moodle_Provisioning {
 		$role = get_role( 'administrator' );
 		$role->add_cap( TVS_PMP_REQUIRED_CAPABILITY );
 
-		add_option( 'tvs_parent_moodle_provisioning_dbversion', TVS_PMP_DBVERSION );
+		update_option( 'tvs_parent_moodle_provisioning_dbversion', TVS_PMP_DBVERSION );
 	
 	}
 
