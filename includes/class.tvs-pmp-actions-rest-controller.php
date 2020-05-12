@@ -124,6 +124,77 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 					'args'                => $this->get_endpoint_args()
 				)
 			) );
+			
+			register_rest_route( $this->namespace, '/parent-account-request/(?P<email>[a-ZA-Z0-9@\.-_]+)', [
+				'args' => [
+					'email' => [
+						'description' => 'Email address of parent request',
+						'type'        => 'string'
+					]
+				],
+				[
+					/* readable */
+					'methods' => WP_REST_Server::READABLE,
+					'callback' => [ $this, 'get_by_email' ],
+					'permission_callback' => [ $this, 'get_item_permissions_check' ]
+				],
+				[
+					/*editable*/
+					'methods' => WP_REST_Server::EDITABLE,
+					'callback' => [ $this, 'update_by_email' ],
+					'permission_callback' => [ $this, 'get_item_permissions_check' ],
+					'args'  => [
+						'mis_id' => [
+							'validate_callback' => function( $param, $request, $key) {
+								return ctype_digit( $param );
+							},
+							'required' => true
+						],
+						'external_mis_id' => [
+							'validate_callback' => function( $param, $request, $key) {
+								return ( preg_match( '/^([a-f0-9]){8}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){12}$/', $param ) === 1 );
+							},
+							'required' => true
+
+						]
+					]
+				]
+			]
+			);
+
+		}
+
+		public function get_by_email( $request ) {
+
+		}
+
+
+		/**
+		 * Update the mis_id and external_mis_id for the request that matches this email address.
+		 */
+		public function update_by_email( $request ) {
+			global $wpdb;
+
+			// UPDATE {$wpdb->prefix}tvs_parent_moodle_provisioning SET mis_id = %d, external_mis_id = %s WHERE status = %s AND parent_email = %s
+
+			return rest_ensure_response( $wpdb->update( 'tvs_parent_moodle_provisioning',
+				[ /* data */
+					'mis_id' => $request->get_param( 'mis_id' ),
+					'external_mis_id' => $request->get_param( 'external_mis_id' )
+				],
+				[ /* where */
+					'status' => 'provisioned',
+					'parent_email' => $request->get_param( 'email' )
+				],
+				[ /* data format */
+					'%d',
+					'%s'
+				],
+				[ /* where format */
+					'%s',
+					'%s'
+				]
+			) );
 
 		}
 
@@ -266,7 +337,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 		 * Handle a WP-JSON REST API request to create ('POST') a 
 		 * parent account request.
 		 */
-		public function create_item( WP_REST_Request $request ) {
+		public function create_item( $request ) {
 			// create a new request based on the passed parameters, pre-validated by the callbacks
 			if ( ! current_user_can( TVS_PMP_REQUIRED_CAPABILITY ) ) {
 				return new WP_Error( 403, __( 'You do not have permission to perform this action.', 'tvs-moodle-parent-provisioning' ) ); 
