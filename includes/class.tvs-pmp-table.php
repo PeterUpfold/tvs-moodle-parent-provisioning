@@ -373,7 +373,17 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 		?><span class="childnames-end" data-request-id="<?php echo $item->id; ?>"></span><br/><br/><strong><?php _e( 'Email:', 'tvs-moodle-parent-provisioning' ); ?></strong><br/><?php
 		echo esc_html( $item->parent_email );
 
-		?><div class="row-actions">
+?>
+<br/>
+<strong>MIS ID:</strong>
+<?php
+		echo ( $item->mis_id != NULL ) ? esc_html( $item->mis_id ) : 'not set';
+?><br />
+<strong>External MIS ID:</strong>
+<?php
+		echo ( $item->external_mis_id != NULL ) ? esc_html( $item->external_mis_id ) : 'not set';
+?>
+<div class="row-actions">
 			<span class="adjustchildname"><a href="" data-request-id="<?php echo $item->id; ?>"><?php _e ( 'Adjust Childrens&rsquo; Names to Match Moodle', 'tvs-moodle-parent-provisioning' ); ?></a></span>
 		</div>
 		<?php
@@ -413,7 +423,7 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 						child_tg, parent_email, child2_fname, child2_sname, child2_tg, child3_fname,
 						child3_sname, child3_tg, status, parent_comment, staff_comment, system_comment,
 						date_created, date_updated, date_approved, remote_ip_addr, provisioned_username,
-						provisioned_initialpass, request_type
+						provisioned_initialpass, request_type, mis_id, external_mis_id
 					FROM {$wpdb->prefix}{$tn}
 					WHERE status = %s
 					ORDER BY {$orderby} {$order}
@@ -433,7 +443,7 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 						child_tg, parent_email, child2_fname, child2_sname, child2_tg, child3_fname,
 						child3_sname, child3_tg, status, parent_comment, staff_comment, system_comment,
 						date_created, date_updated, date_approved, remote_ip_addr, provisioned_username,
-						provisioned_initialpass, request_type
+						provisioned_initialpass, request_type, mis_id, external_mis_id
 					FROM {$wpdb->prefix}{$tn}
 					ORDER BY {$orderby} {$order}
 					LIMIT %d, %d",
@@ -458,7 +468,7 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 						child_tg, parent_email, child2_fname, child2_sname, child2_tg, child3_fname,
 						child3_sname, child3_tg, status, parent_comment, staff_comment, system_comment,
 						date_created, date_updated, date_approved, remote_ip_addr, provisioned_username,
-						provisioned_initialpass, request_type
+						provisioned_initialpass, request_type, mis_id, external_mis_id
 					FROM {$wpdb->prefix}{$tn}
 					WHERE status = %s AND
 					(
@@ -501,7 +511,7 @@ class TVS_PMP_Table extends TVS_WP_List_Table {
 						child_tg, parent_email, child2_fname, child2_sname, child2_tg, child3_fname,
 						child3_sname, child3_tg, status, parent_comment, staff_comment, system_comment,
 						date_created, date_updated, date_approved, remote_ip_addr, provisioned_username,
-						provisioned_initialpass, request_type
+						provisioned_initialpass, request_type, mis_id, external_mis_id
 					FROM {$wpdb->prefix}{$tn}
 					WHERE
 						parent_fname LIKE %s OR

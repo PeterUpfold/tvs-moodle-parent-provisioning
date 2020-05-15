@@ -125,7 +125,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 				)
 			) );
 			
-			register_rest_route( $this->namespace, '/parent-account-request/(?P<email>[a-ZA-Z0-9@\.-_]+)', [
+			register_rest_route( $this->namespace, '/parent-account-request/(?P<email>[a-zA-Z0-9\@\.-_]+)', [
 				'args' => [
 					'email' => [
 						'description' => 'Email address of parent request',
@@ -177,7 +177,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 
 			// UPDATE {$wpdb->prefix}tvs_parent_moodle_provisioning SET mis_id = %d, external_mis_id = %s WHERE status = %s AND parent_email = %s
 
-			return rest_ensure_response( $wpdb->update( 'tvs_parent_moodle_provisioning',
+			return rest_ensure_response( $wpdb->update( $wpdb->prefix . 'tvs_parent_moodle_provisioning',
 				[ /* data */
 					'mis_id' => $request->get_param( 'mis_id' ),
 					'external_mis_id' => $request->get_param( 'external_mis_id' )
