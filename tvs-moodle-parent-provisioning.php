@@ -8,7 +8,7 @@ Author: Mr P Upfold
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 */
-/*/* Copyright (C) 2016-2018 Test Valley School.
+/*/* Copyright (C) 2016-2020 Test Valley School.
 
 
     This program is free software; you can redistribute it and/or
@@ -58,6 +58,11 @@ class TVS_Parent_Moodle_Provisioning {
 		require_once( dirname( __FILE__ ) . '/includes/class.tvs-pmp-contact-mapping-rest-controller.php' );
 		$rest_controller = new TVS_PMP_Contact_Mapping_REST_Controller();
 		add_action( 'rest_api_init', array( $rest_controller, 'register_routes' ) );
+
+		if ( ! get_option( 'tvs_parent_moodle_parent_provisioning_dbversion' ) !== TVS_PMP_DBVERSION ) {
+			$this->create_tables();
+		}
+
 	}
 
 	/**

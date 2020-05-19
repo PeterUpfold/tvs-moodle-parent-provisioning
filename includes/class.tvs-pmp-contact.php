@@ -1,5 +1,5 @@
 <?php
-/*/* Copyright (C) 2016-2018 Test Valley School.
+/*/* Copyright (C) 2016-2020 Test Valley School.
 
 
     This program is free software; you can redistribute it and/or
@@ -1239,6 +1239,33 @@ class TVS_PMP_Contact {
 		return sprintf( __( '[Contact]%d: MIS ID: %d, external MIS ID: %s, %s %s %s', 'tvs-moodle-parent-provisioning' ), $this->id, $this->mis_id, $this->external_mis_id, $this->title, $this->forename, $this->surname );
 	}
 
+
+	/**
+	 * Upgrade a Moodle Parent Provisioning Request from the legacy requests format
+	 * into a Contact, where the request has mis_id and external_mis_id fields populated.
+	 *
+	 * @return TVS_PMP_Contact|false
+	 */
+	public static function upgrade_from_request( $request ) {
+		if ( ! $request instanceof \stdClass ) {
+			throw new InvalidArgumentException( __( 'Passed request must be an stdClass.', 'tvs-moodle-parent-provisioning' ) );
+		}
+
+		if ( ! property_exists( $request, 'mis_id' ) ) {
+			throw new InvalidArgumentException( sprintf( __( 'Passed request must be contain a \'%s\' property.', 'tvs-moodle-parent-provisioning' ), 'mis_id' ) );
+		}
+		if ( ! property_exists( $request, 'external_mis_id' ) ) {
+			throw new InvalidArgumentException( sprintf( __( 'Passed request must be contain a \'%s\' property.', 'tvs-moodle-parent-provisioning' ), 'external_mis_id' ) );
+		}
+
+
+
+
+		$contact = new TVS_PMP_Contact();
+
+
+
+	}
 
 };
 
