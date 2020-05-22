@@ -1244,9 +1244,9 @@ class TVS_PMP_Contact {
 	 * Upgrade a Moodle Parent Provisioning Request from the legacy requests format
 	 * into a Contact, where the request has mis_id and external_mis_id fields populated.
 	 *
-	 * @return TVS_PMP_Contact|false
-	 */
-	public static function upgrade_from_request( $request ) {
+	 * @return int|false Count of affected rows
+ 	 */
+	public static function create_migrated_contact_from_request( $request, $logger, $dbc ) {
 		if ( ! $request instanceof \stdClass ) {
 			throw new InvalidArgumentException( __( 'Passed request must be an stdClass.', 'tvs-moodle-parent-provisioning' ) );
 		}
@@ -1259,11 +1259,21 @@ class TVS_PMP_Contact {
 		}
 
 
+		$contact = new TVS_PMP_Contact( $logger, $dbc );
 
+		$contact->mis_id = $request->mis_id;
+		$contact->external_mis_id = $request->external_mis_id;
+		$contact->title     = $request->parent_title;
+		$contact->forename  = $request->parent_fname;
+		$contact->surname   = $request->parent_sname;
+		$contact->email     = $request->parent_email;
+		$contact->load_mdl_user();
+		$contact->staff_comment = $request->staff_comment;
+		$contact->system_comment = $request->system_comment;
+		$contact->date_created = $request->date_created;
+		$contact->date_approved = $request->date_approved;
 
-		$contact = new TVS_PMP_Contact();
-
-
+		return $contact->save();
 
 	}
 
