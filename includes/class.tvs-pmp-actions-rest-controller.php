@@ -125,7 +125,7 @@ if (  class_exists( 'WP_REST_Controller' ) ) {
 				)
 			) );
 			
-			register_rest_route( $this->namespace, '/parent-account-request/(?P<email>[a-zA-Z0-9\@\.-_]+)', [
+			register_rest_route( $this->namespace, '/parent-account-request/(?P<email>[a-zA-Z0-9\@\.\-_]+)', [
 				'args' => [
 					'email' => [
 						'description' => 'Email address of parent request',
